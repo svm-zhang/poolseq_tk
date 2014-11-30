@@ -8,7 +8,7 @@ import rpy2.robjects as robjects
 import rpy2.robjects.packages as rpackages
 import rpy2.rlike.container as rlc
 
-def cmd_interface():
+def getopts():
 	usage = "Run Fisher's Exact Test at each SNP"
 	fisher_parser = argparse.ArgumentParser(description=usage)
 	fisher_parser.add_argument("-ac",
@@ -42,7 +42,7 @@ def cmd_interface():
 	return fisher_parser.parse_args()
 
 def run_fisher():
-	args = cmd_interface()
+	args = getopts()
 	''' run Fisher's Exact test '''
 	szmake_dirs_if_necessary(os.path.dirname(args.outp))
 	tables = count2table(args.ac_file)[0]
@@ -80,7 +80,7 @@ def run_fisher():
 		with open(out_all, 'w') as fALL, open(out_fdr, 'w') as fFDR, open(out_expect, 'w') as fEXPECT:
 			for i, pos in enumerate(sorted(pvals.iterkeys())):
 				if padjust[i] <= args.adj_cutoff:
-					sz_utils.results_outputter(fFDR, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
+					sz_utils._results_outputter(fFDR, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
 					if ((args.oddsr_direction == "less" and odds_ratios[pos] < 1) or
 						 args.oddsr_direction == "greater" and odds_ratios[pos] > 1):
 						sz_utils._results_outputter(fEXPECT, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
