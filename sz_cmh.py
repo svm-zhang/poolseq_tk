@@ -8,7 +8,7 @@ import rpy2.robjects as robjects
 import rpy2.robjects.packages as rpackages
 import rpy2.rlike.container as rlc
 
-def _cmd_interface():
+def _getopts():
 	usage="run Cochran-Mantel-Haenszel test with multi-testing adjustment"
 	cmh_parser = argparse.ArgumentParser(description=usage)
 	cmh_parser.add_argument("-table",
@@ -44,7 +44,7 @@ def _cmd_interface():
 def run_cmh():
 	''' run Cochran-Mantel-Hasenzle test '''
 
-	args = _cmd_interface()
+	args = _getopts()
 	sz_utils.make_dirs_if_necessary(os.path.dirname(args.outp))
 	allele_counts = {}
 	pvals = {}
