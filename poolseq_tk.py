@@ -9,6 +9,7 @@ import shlex
 import re
 
 import sz_collapse
+import sz_acount
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -76,8 +77,21 @@ def getopts():
 								 help="output file. Default: STDOUT")
 	collapse_parser.set_defaults(func=sz_collapse.run_collapse)
 
+	usage = "Counting number of alleles given number of pileup files"
+	count_parser = sub_parsers.add_parser("count", help=usage)
+	count_parser.add_argument("-o",
+							  metavar="FILE",
+							  dest="out",
+							  nargs='?',
+							  default=sys.stdout,
+							  help="output file of allele counts at each SNP. Default: STDOUT")
+	count_parser.add_argument("pileups",
+							  metavar="PILEUP",
+							  nargs='+',
+							  help="pileup files")
+	count_parser.set_defaults(func=sz_acount.run_count)
+
 	filter_parser = sub_parsers.add_parser("filter", help="filter out SNPs in allele counts file that do not satisfy given conditions")
-	count_parser = sub_parsers.add_parser("count", help="counting alleles given mpileup file")
 	mergeAC_parser = sub_parsers.add_parser("mergeAC", help="combining allele counts from replicates")
 	fisher_parser = sub_parsers.add_parser("fisher", help="run Fisher's Exact Test at each SNP")
 	cmh_parser = sub_parsers.add_parser("cmh", help="run Cochran-Mantel-Haenszel test with multi-testing adjustment")
@@ -88,7 +102,6 @@ def getopts():
 	return parser.parse_args()
 
 #	filter_parser.set_defaults(func=filter_SNPs)
-#	count_parser.set_defaults(func=run_count)
 #	mergeAC_parser.set_defaults(func=mergeAC)
 #	fisher_parser.set_defaults(func=run_fisher)
 #	cmh_parser.set_defaults(func=run_cmh)
