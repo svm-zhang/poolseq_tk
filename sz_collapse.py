@@ -106,6 +106,7 @@ def run_collapse(args):
 def get_SNPs(snps_file):
 	''' read the SNP positions into a dictionary of tuple '''
 	snp_pos = collections.defaultdict(tuple)
+	sz_utils.check_if_files_exist(snps_file)
 	with open(snps_file, 'r') as fSNP:
 		for line in fSNP:
 			if not line.startswith('#'):
@@ -124,6 +125,7 @@ def read_mpileup(mpileup_file, offset):
 	ColorText().info("[poolseq_tk]: reading %s ..." %(mpileup_file), "stderr")
 	mpileup_info = collections.defaultdict(tuple)
 	chr = ""
+	sz_utils.check_if_files_exist(mpileup_file)
 	with open(mpileup_file, 'r') as fMPILEUP:
 		for line in fMPILEUP:
 			tmp_line = line.strip().split("\t")
