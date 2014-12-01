@@ -7,11 +7,8 @@ import glob
 import subprocess
 import shlex
 import re
-import shutil
 
-import rpy2.robjects as robjects
-import rpy2.robjects.packages as rpackages
-import rpy2.rlike.container as rlc
+import sz_collapse
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -37,12 +34,48 @@ class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 		else:
 			return parts
 
-def show_subcommand_overviews():
+def getopts():
 	parser = argparse.ArgumentParser(description="Toolkits for Genome-wide Association Mapping using Pooled Sequencing")
 	sub_parsers = parser.add_subparsers(title="Commands", metavar="", dest="command")
 
-	# merging two mpileup files
-	collapse_parser = sub_parsers.add_parser("collapse", help="collapse two mpileupis that covering the same set of SNPs")
+	# Collapsing two mpileup files
+	usage = "Collapsing two pileup files at corresponding SNPs"
+	collapse_parser = sub_parsers.add_parser("collapse", help=usage)
+	collapse_parser.add_argument("-m1",
+								 metavar="FILE",
+								 dest="m1",
+								 required="True",
+								 help="one of the two mpileup files")
+	collapse_parser.add_argument("-m2",
+								 metavar="FILE",
+								 dest="m2",
+								 required="True",
+								 help="one of the two mpileup files")
+	collapse_parser.add_argument("-snps",
+								 metavar="FILE",
+								 dest="snps",
+								 required="True",
+								 help="a list of SNP positions. e.g. chr\\tpos")
+	collapse_parser.add_argument("-offset1",
+								 metavar="INT",
+								 dest="offset1",
+								 type=int,
+								 default=0,
+								 help="offset add in for the first mpileup file specified by -m1")
+	collapse_parser.add_argument("-offset2",
+								 metavar="INT",
+								 dest="offset2",
+								 type=int,
+								 default=0,
+								 help="offset add in for the second mpileup file specified by -m2")
+	collapse_parser.add_argument("-o",
+								 metavar="FILE",
+								 dest="out",
+								 nargs='?',
+								 default=sys.stdout,
+								 help="output file. Default: STDOUT")
+	collapse_parser.set_defaults(func=sz_collapse.run_collapse)
+
 	filter_parser = sub_parsers.add_parser("filter", help="filter out SNPs in allele counts file that do not satisfy given conditions")
 	count_parser = sub_parsers.add_parser("count", help="counting alleles given mpileup file")
 	mergeAC_parser = sub_parsers.add_parser("mergeAC", help="combining allele counts from replicates")
@@ -52,74 +85,54 @@ def show_subcommand_overviews():
 	adjust_parser = sub_parsers.add_parser("adjust", help="getting significant SNPs with FDR correction")
 	overlap_parser = sub_parsers.add_parser("overlap", help="overlapion of significant SNPs identified from two pools")
 	diff_parser = sub_parsers.add_parser("diff", help="get SNPs that significant in one replicate but not in the other")
+	return parser.parse_args()
 
-#	collapse_parser.set_defaults(func=collapse_mpileups)
-
-	# Arguments for filtering unwanted SNPs
 #	filter_parser.set_defaults(func=filter_SNPs)
-
-	# counting alleles
 #	count_parser.set_defaults(func=run_count)
-
-	# arguments for combining allele counts from replicates
 #	mergeAC_parser.set_defaults(func=mergeAC)
-
 #	fisher_parser.set_defaults(func=run_fisher)
-
 #	cmh_parser.set_defaults(func=run_cmh)
-
 #	plot_parser.set_defaults(func=making_plot)
-
 #	adjust_parser.set_defaults(func=multi_testing_correction)
-
 #	overlap_parser.set_defaults(func=overlap)
 #	diff_parser.set_defaults(func=call_diff)
 
-	return parser.parse_args()
-
-
-
-def cat_split_files(file_list, out_file):
-	''' concatenate split files '''
-	with open(out_file, 'w') as fOUT:
-		for file in sorted(file_list):
-			shutil.copyfileobj(open(file, 'r'), fOUT)
-
 def main():
-	subcommand = sys.argv[1]
-	if subcommand == "collapse":
-		import sz_collapse
-		sz_collapse.run_collapse()
-	elif subcommand == "filter":
-		import sz_filter
-		sz_filter.run_filter()
-	elif subcommand == "mergeAC":
-		import sz_mergeAC
-		sz_mergeAC.run_merge()
-	elif subcommand == "count":
-		import sz_acount
-		sz_acount.count_alleles()
-	elif subcommand == "fisher":
-		import sz_fisher
-		sz_fisher.run_fisher()
-	elif subcommand == "cmh":
-		import sz_cmh
-		sz_cmh.run_cmh()
-	elif subcommand == "adjust":
-		import sz_multitests_corr
-		sz_multitests_corr.run_correction()
-	elif subcommand == "overlap":
-		import sz_overlap
-		sz_overlap.overlap()
-	elif subcommand == "diff":
-		import sz_diff
-		sz_diff.run_diff()
-	elif subcommand == "plot":
-		import sz_plotting
-		sz_plotting.making_plot()
-#	elif subcommand in ["-h", "--help"]:
-	else:
-		show_subcommand_overviews()
+	args = getopts()
+	args.func(args)
+	#	subcommand = sys.argv[1]
+#	if subcommand == "collapse":
+#		import sz_collapse
+#		sz_collapse.run_collapse()
+#	elif subcommand == "filter":
+#		import sz_filter
+#		sz_filter.run_filter()
+#	elif subcommand == "mergeAC":
+#		import sz_mergeAC
+#		sz_mergeAC.run_merge()
+#	elif subcommand == "count":
+#		import sz_acount
+#		sz_acount.count_alleles()
+#	elif subcommand == "fisher":
+#		import sz_fisher
+#		sz_fisher.run_fisher()
+#	elif subcommand == "cmh":
+#		import sz_cmh
+#		sz_cmh.run_cmh()
+#	elif subcommand == "adjust":
+#		import sz_multitests_corr
+#		sz_multitests_corr.run_correction()
+#	elif subcommand == "overlap":
+#		import sz_overlap
+#		sz_overlap.overlap()
+#	elif subcommand == "diff":
+#		import sz_diff
+#		sz_diff.run_diff()
+#	elif subcommand == "plot":
+#		import sz_plotting
+#		sz_plotting.making_plot()
+#	else:
+#		show_subcommand_overviews()
 
 if __name__ == "__main__":
 	main()
