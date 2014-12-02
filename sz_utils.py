@@ -1,11 +1,20 @@
 import os
 import sys
+import shutil
 
+from colortext import ColorText
 
 def make_dirs_if_necessary(*dirs):
 	for dir in dirs:
 		if not os.path.exists(dir):
 			os.makedirs(dir)
+
+def check_if_files_exist(*files):
+	for file in files:
+		if not os.path.exists(file):
+			ColorText().error("\n[poolseq_tk] ERROR: cannot find file %s\n"
+							 %(os.path.realpath(file)))
+			sys.exit(1)
 
 def calculate_pval_cutoff(pvals, fdr):
 	ntests = len(pvals)
@@ -31,6 +40,12 @@ def calculate_min_power(alpha):
 		else:
 			power += 1
 	return power
+
+def cat_split_files(file_list, out_file):
+	''' concatenate split files '''
+	with open(out_file, 'w') as fOUT:
+		for file in sorted(file_list):
+			shutil.copyfileobj(open(file, 'r'), fOUT)
 
 def count2table(ac_file):
 	sys.stdout.write("[pool_gwas]: reading counts and preparing 2*2 tables ...")
