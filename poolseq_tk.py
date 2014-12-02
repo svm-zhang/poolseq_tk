@@ -10,6 +10,7 @@ import re
 
 import sz_collapse
 import sz_acount
+import sz_mergeAC
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -72,7 +73,6 @@ def getopts():
 	collapse_parser.add_argument("-o",
 								 metavar="FILE",
 								 dest="out",
-								 nargs='?',
 								 default=sys.stdout,
 								 help="output file. Default: STDOUT")
 	collapse_parser.set_defaults(func=sz_collapse.run_collapse)
@@ -82,7 +82,6 @@ def getopts():
 	count_parser.add_argument("-o",
 							  metavar="FILE",
 							  dest="out",
-							  nargs='?',
 							  default=sys.stdout,
 							  help="output file of allele counts at each SNP. Default: STDOUT")
 	count_parser.add_argument("pileups",
@@ -92,7 +91,20 @@ def getopts():
 	count_parser.set_defaults(func=sz_acount.run_count)
 
 	filter_parser = sub_parsers.add_parser("filter", help="filter out SNPs in allele counts file that do not satisfy given conditions")
-	mergeAC_parser = sub_parsers.add_parser("mergeAC", help="combining allele counts from replicates")
+
+	usage = "Merging allele counts from multiple replicates"
+	mergeAC_parser = sub_parsers.add_parser("mergeAC", help=usage)
+	mergeAC_parser.add_argument("-o",
+								metavar="FILE",
+								dest="out",
+								default=sys.stdout,
+								help="output file of combined counts at each SNP across replicates")
+	mergeAC_parser.add_argument("acs",
+								metavar="ac_file",
+								nargs='+',
+								help="allele counts files")
+	mergeAC_parser.set_defaults(func=sz_mergeAC.run_merge)
+
 	fisher_parser = sub_parsers.add_parser("fisher", help="run Fisher's Exact Test at each SNP")
 	cmh_parser = sub_parsers.add_parser("cmh", help="run Cochran-Mantel-Haenszel test with multi-testing adjustment")
 	plot_parser = sub_parsers.add_parser("plot", help="making Manhattan and Q-Q plots")
@@ -102,7 +114,6 @@ def getopts():
 	return parser.parse_args()
 
 #	filter_parser.set_defaults(func=filter_SNPs)
-#	mergeAC_parser.set_defaults(func=mergeAC)
 #	fisher_parser.set_defaults(func=run_fisher)
 #	cmh_parser.set_defaults(func=run_cmh)
 #	plot_parser.set_defaults(func=making_plot)
