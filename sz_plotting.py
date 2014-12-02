@@ -25,9 +25,9 @@ def making_plot():
 
 	# install qqman package if not installed
 	if not rpackages.isinstalled("qqman"):
-		utils = rpackages.importr('utils')
-		utils.chooseCRANmirror(ind=84)
-		utils.install_packages("qqman")
+		rutils = rpackages.importr('utils')
+		rutils.chooseCRANmirror(ind=84)
+		rutils.install_packages("qqman")
 
 	# get pvalues
 	data = collections.defaultdict(tuple)
