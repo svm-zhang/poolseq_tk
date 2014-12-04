@@ -4,10 +4,14 @@ import shutil
 
 from colortext import ColorText
 
-def make_dirs_if_necessary(*dirs):
-	for dir in dirs:
+def make_dirs_if_necessary(*files):
+	for file in files:
+		dir = getdirs(file)
 		if not os.path.exists(dir):
 			os.makedirs(dir)
+
+def getdirs(file):
+	return os.path.dirname(os.path.realpath(file))
 
 def check_if_files_exist(*files):
 	for file in files:
