@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import collections
 
 from colortext import ColorText
 
@@ -51,8 +52,9 @@ def cat_split_files(file_list, out_file):
 		for file in sorted(file_list):
 			shutil.copyfileobj(open(file, 'r'), fOUT)
 
-def count2table(ac_file):
-	sys.stdout.write("[pool_gwas]: reading counts and preparing 2*2 tables ...")
+def _count2table(ac_file):
+	ColorText().info("[poolseq_tk]: reading counts and preparing 2*2 tables ...",
+					 "stderr")
 	tables = collections.defaultdict(list)
 	ntables_per_snp = 0
 	with open(ac_file, 'r') as fAC:
@@ -66,7 +68,7 @@ def count2table(ac_file):
 			tables[pos] = [tmp_line[0], base1, base2]		# chr, allele1, allele2
 			for counts in tmp_line[4:]:
 				tables[pos] += counts.split(':')			# counts
-	sys.stdout.write(" [done]\n")
+	ColorText().info(" [done]\n", "stderr")
 	return tables, ntables_per_snp
 
 def _assign_tables(tables, task_q, nproc):
