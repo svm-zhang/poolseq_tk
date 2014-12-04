@@ -11,6 +11,7 @@ import re
 import sz_collapse
 import sz_acount
 import sz_mergeAC
+import sz_filter
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -90,7 +91,37 @@ def getopts():
 							  help="pileup files")
 	count_parser.set_defaults(func=sz_acount.run_count)
 
-	filter_parser = sub_parsers.add_parser("filter", help="filter out SNPs in allele counts file that do not satisfy given conditions")
+	usage = "Filter SNPs that are not satisfied specified conditions"
+	filter_parser = sub_parsers.add_parser("filter", help=usage)
+	filter_parser.add_argument("-ac",
+								metavar="FILE",
+								dest="ac_file",
+								required=True,
+								help="allele counts file")
+	filter_parser.add_argument("-o",
+								metavar="FILE",
+								dest="out",
+								default=sys.stdout,
+								help="output file without filtered SNPs. Default: STDOUT")
+	filter_parser.add_argument("-min_ref_ac",
+								metavar="INT",
+								dest="min_ref_ac",
+								type=int,
+								default=5,
+								help="minimum number of the ref allele (3rd column) per sample/pool")
+	filter_parser.add_argument("-min_alt_ac",
+								metavar="INT",
+								dest="min_alt_ac",
+								type=int,
+								default=5,
+								help="minimum number of the alt allele (4th column) per sample/pool")
+	filter_parser.add_argument("-min_cov",
+								metavar="INT",
+								dest="min_cov",
+								type=int,
+								default=10,
+								help="specify minimum coverage per site per sample/pool")
+	filter_parser.set_defaults(func=sz_filter.run_filter)
 
 	usage = "Merging allele counts from multiple replicates"
 	mergeAC_parser = sub_parsers.add_parser("mergeAC", help=usage)
@@ -113,7 +144,6 @@ def getopts():
 	diff_parser = sub_parsers.add_parser("diff", help="get SNPs that significant in one replicate but not in the other")
 	return parser.parse_args()
 
-#	filter_parser.set_defaults(func=filter_SNPs)
 #	fisher_parser.set_defaults(func=run_fisher)
 #	cmh_parser.set_defaults(func=run_cmh)
 #	plot_parser.set_defaults(func=making_plot)
