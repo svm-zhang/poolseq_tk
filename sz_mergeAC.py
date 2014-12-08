@@ -1,3 +1,18 @@
+'''
+	poolseq_tk.py mergeAC
+	Description: combining allele counts across samples/replicates
+	Author: Simo V. Zhang
+
+	Input: allele counts files
+
+	Output: counts-merged file
+			(1) chr
+			(2) pos
+			(3) ref base
+			(4) alt base
+			(5) merged allele counts
+'''
+
 import os
 import sys
 import collections
@@ -31,8 +46,7 @@ def run_merge(args):
 	if args.out == sys.stdout:
 		fOUT = sys.stdout
 	else:
-		outdir = os.path.dirname(os.path.realpath(args.out))
-		sz_utils.make_dirs_if_necessary(outdir)
+		sz_utils.make_dirs_if_necessary(args.out)
 		fOUT = open(args.out, 'w')
 	ColorText().info("[poolseq_tk] outputting to %s ..."
 					 %(fOUT.name), "stderr")
