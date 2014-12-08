@@ -1,3 +1,23 @@
+'''
+	poolseq_tk.py fisher
+	Description: run Fisher's Exact test at each SNP
+	Author: Simo V. Zhang
+
+	Input: filtered or raw allele counts file
+
+	Output: outprefix.all
+			(1) chr
+			(2) pos
+			(3) ref base
+			(4) alt base
+			(5) allele counts
+			(6) raw p-values
+			(7) adjusted p-values
+			(8) odds ratios
+
+			outprefix.fdr: a set of SNPs survived FDR
+'''
+
 import sys
 import os
 import multiprocessing as mp
