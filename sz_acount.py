@@ -1,3 +1,20 @@
+'''
+	python poolseq_tk.py count
+
+	Description: Count alleles at each SNP give the pileups
+	Author: Simo V. Zhang
+
+	Input: pileup file with reads bases converted to corresponding alleles
+
+	Output: pielup file with allele counts
+		   (1) chr
+		   (2) pos
+		   (3) ref base
+		   (4) alt base
+		   (5) allele counts in the order of ref and alt, separated by colon
+
+'''
+
 import argparse
 import collections
 import sys
@@ -36,16 +53,20 @@ def run_count(args):
 	if args.out == sys.stdout:
 		fOUT = sys.stdout
 	else:
-		outdir = os.path.dirname(os.path.realpath(args.out))
-		sz_utils.make_dirs_if_necessary(outdir)
+		sz_utils.make_dirs_if_necessary(args.out)
 		fOUT = open(args.out, 'w')
 	ColorText().info("[poolseq_tk] outputting allele counts to table ...", "stderr")
 	for pos in sorted(ac.iterkeys()):
 		fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
 		i = 3
-		while i <= len(ac[pos])-4:
-			fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
-			i += 4
+		if len(args.pileups) != 1:
+			while i <= len(ac[pos])-4:
+				fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
+				i += 4
+		else:			# case where only one pileup file provided
+			while i <= len(ac[pos])-2:
+				fOUT.write("\t%s" %(":".join(ac[pos][i:i+2])))
+				i += 2
 		fOUT.write("\n")
 	ColorText().info(" [done]\n", "stderr")
 	fOUT.close()
