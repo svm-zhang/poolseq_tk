@@ -21,14 +21,6 @@ def check_if_files_exist(*files):
 							 %(os.path.realpath(file)))
 			sys.exit(1)
 
-def calculate_pval_cutoff(pvals, fdr):
-	ntests = len(pvals)
-	pre_pval = 0.0
-	for i, pval in enumerate(sorted(pvals)):
-		if pval > (float(i+1)/ntests)*fdr :
-			return pre_pval
-		pre_pval = pval
-
 def calculate_min_power(alpha):
 	'''
 		calculate the minimum row/column totals
