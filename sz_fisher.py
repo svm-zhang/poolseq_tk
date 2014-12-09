@@ -134,6 +134,9 @@ def _fisher_worker(task_q, result_q):
 					else:
 						oddsr = rfisher[2][0]
 					odds_ratios_split[pos] = oddsr
+			ColorText().info("[poolseq_tk]: %s ran %d tests\n"
+							 %(mp.current_process().name, len(pvals_split)),
+							 "stderr")
 			result_q.put((pvals_split, odds_ratios_split))
 		finally:
 			task_q.task_done()
