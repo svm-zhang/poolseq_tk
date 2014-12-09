@@ -21,6 +21,33 @@ import argparse
 import sz_utils
 from colortext import ColorText
 
+def apply_filter(tmp_counts, fail, args):
+	counts = map(int, tmp_counts.split(':'))
+	if len(counts) < 2:
+		ColorText().error("At least two counts (separated by colon) required"
+						  "for column five\n")
+		sys.exit(1)
+	for i in range(len(counts)):
+		if i == 0:
+			if counts[i] < args.min_ref_ac:
+				fail = 1
+				break
+		elif i == 1:
+			if (counts[i] < args.min_alt_ac or
+				counts[i] + counts[i-1] < args.min_cov):
+				fail = 1
+				break
+		elif i == 2:
+			if counts[i] < args.min_ref_ac:
+				fail = 1
+				break
+		elif i == 3:
+			if (counts[i] < args.min_alt_ac or
+			   counts[i] + counts[i-1] < args.min_cov):
+				fail = 1
+				break
+	return fail
+
 def run_filter(args):
 	sz_utils.check_if_files_exist(args.ac_file)
 	fOUT = None
@@ -36,32 +63,12 @@ def run_filter(args):
 			before += 1
 			ref_base = tmp_line[2]
 			alt_base  = tmp_line[3]
-			counts = map(int, tmp_line[4].split(':'))
-			if len(counts) < 2:
-				ColorText().error("At least two counts (separated by colon) required"
-								  "for column five\n")
-				sys.exit(1)
 			fail = 0
-			for i in range(len(counts)):
-				if i == 0:
-					if counts[i] < args.min_ref_ac:
-						fail = 1
-						break
-				elif i == 1:
-					if (counts[i] < args.min_alt_ac or
-					    counts[i] + counts[i-1] < args.min_cov):
-						fail = 1
-						break
-				elif i == 2:
-					if counts[i] < args.min_ref_ac:
-						fail = 1
-						break
-				elif i == 3:
-					if (counts[i] < args.min_alt_ac or
-					   counts[i] + counts[i-1] < args.min_cov):
-						fail = 1
-						break
-			if fail == 0:
+			for i in range(len(tmp_line[4:])):
+				fail = apply_filter(tmp_line[4:][i], fail, args)
+				if fail:
+					break
+			if not fail:
 				fOUT.write(line)
 				after += 1
 	fOUT.close()
