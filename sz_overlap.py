@@ -1,24 +1,33 @@
+'''
+	python poolseq_tk.py overlap
+	Description: Getting SNPs identified from both pools/samples
+	Author: Simo V. Zhang
+
+	Input: statistical tests generated from step 5
+	Output: set of SNPs in both
+'''
+
 import os
 import sys
 import argparse
 import collections
 
-def getopts():
-	usage = "Get overlaps of significant SNPs between replicates/pools"
-	overlap_parser = argparse.ArgumentParser(description=usage)
-	overlap_parser.add_argument("-a", metavar="FILE", dest="file_a", help="significant SNPs identified from pool A")
-	overlap_parser.add_argument("-b", metavar="FILE", dest="file_b", help="significant SNPs identified from pool B")
-	overlap_parser.add_argument("-o", metavar="FILE", dest="out", help="output file of overlapion of significant SNPs identified from both pools")
-	return overlap_parser.parse_args()
+import sz_utils
+from colortext import ColorText
 
-def overlap(args):
+def run_overlap(args):
 	''' getting SNPs identified from both pools '''
+	sz_utils.check_if_files_exist(args.file_a, args.file_b)
+
 	snp_a = collections.defaultdict(list)
 	with open(args.file_a, 'r') as fA:
 		for line in fA:
 			tmp_line = line.strip().split("\t")
 			snp_a[int(tmp_line[1])] = tmp_line
-	sys.stdout.write("[pool_gwas]: %d SNPs parsed from %s\n" %(len(snp_a), os.path.basename(args.file_a)))
+	ColorText().info("[poolseq_tk]: %d SNPs parsed from %s\n" %(len(snp_a),
+					 os.path.basename(args.file_a)), "stderr")
+
+	sz_utils.make_dirs_if_necessary(args.out)
 
 	num_overlapion = 0
 	with open(args.out, 'w') as fOUT:
@@ -28,5 +37,6 @@ def overlap(args):
 				if int(tmp_line[1]) in snp_a:
 					num_overlapion += 1
 					fOUT.write("%s\t%s\n" %("\t".join(snp_a[int(tmp_line[1])]), "\t".join(tmp_line[-4:])))
-	sys.stdout.write("[pool_gwas]: %d SNPs identified from both pools\n" %(num_overlapion))
+	ColorText().info("[poolseq_tk]: %d SNPs identified from both pools\n" %(num_overlapion),
+					 "stderr")
 
