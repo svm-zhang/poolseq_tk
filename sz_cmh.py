@@ -103,11 +103,11 @@ def _cmh_worker(task_q, result_q, ntables_per_snp):
 				array = []
 				i = 0
 				while i <= len(table_part[pos])-4:
-					if(i > 2 and sum(map(int, table_part[pos][i:i+4])) >= 8 and
-					   int(table_part[pos][i])+int(table_part[pos][i+1]) >= 4 and
-					   int(table_part[pos][i])+int(table_part[pos][i+2]) >= 4 and
-					   int(table_part[pos][i+2])+int(table_part[pos][i+3]) >= 4 and
-					   int(table_part[pos][i+1])+int(table_part[pos][i+3]) >= 4):
+					if(i > 2 and sum(map(int, table_part[pos][i:i+4])) >= 10 and
+					   int(table_part[pos][i])+int(table_part[pos][i+1]) >= 5 and
+					   int(table_part[pos][i])+int(table_part[pos][i+2]) >= 5 and
+					   int(table_part[pos][i+2])+int(table_part[pos][i+3]) >= 5 and
+					   int(table_part[pos][i+1])+int(table_part[pos][i+3]) >= 5):
 						array += map(int, table_part[pos][i:i+4])
 						i += 4
 					else:
