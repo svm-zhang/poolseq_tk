@@ -32,6 +32,7 @@ def making_plot(args):
 		rutils.install_packages("qqman")
 
 	# get pvalues
+	ColorText().info("[poolseq_tk]: Extracting P-Values ... ", "stderr")
 	data = collections.defaultdict(tuple)
 	pvals, adjust_pvals = {}, {}
 	with open(args.input, 'r') as fIN:
@@ -39,6 +40,7 @@ def making_plot(args):
 			tmp_line = line.strip().split("\t")
 			data[int(tmp_line[1])] = ("_".join(tmp_line[0:2]), int(tmp_line[0][0]), int(tmp_line[1]))
 			pvals[int(tmp_line[1])] = float(tmp_line[-3])
+	ColorText().info(" [done]\n", "stderr")
 
 	# get SNPs of interests
 	snps_to_highlight = []
@@ -57,9 +59,13 @@ def making_plot(args):
 	grdevices = rpackages.importr('grDevices')
 	raw_pvals_vector = robjects.FloatVector([pvals[k] for k in sorted(pvals.iterkeys())])
 
+	ColorText().info("[poolseq_tk]: Making Q-Q plot ...", "stderr")
 	make_qqplots(grdevices, raw_pvals_vector, out_qqplot)
+	ColorText().info(" [done]\n", "stderr")
 
+	ColorText().info("[poolseq_tk]: Making Manhattan plot ...", "stderr")
 	make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, out_manhattan)
+	ColorText().info(" [done]\n", "stderr")
 
 def make_qqplots(grdevices, raw_pvals_vector, out_qqplot):
 	''' making qqplot '''
