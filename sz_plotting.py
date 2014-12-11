@@ -52,7 +52,7 @@ def making_plot(args):
 	if args.pdf:
 		out_qqplot = args.outp + ".qqplot.pdf"
 		out_manhattan = args.outp + ".manhattan.pdf"
-	elif args.png:
+	elif args.png:			# save to PNG probably wont work
 		out_qqplot = args.outp + ".qqplot.png"
 		out_manhattan = args.outp + ".manhattan.png"
 	sz_utils.make_dirs_if_necessary(out_qqplot, out_manhattan)
