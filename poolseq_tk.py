@@ -12,6 +12,10 @@ import sz_collapse
 import sz_acount
 import sz_mergeAC
 import sz_filter
+import sz_fisher
+import sz_cmh
+import sz_plotting
+import sz_overlap
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -136,57 +140,138 @@ def getopts():
 								help="allele counts files")
 	mergeAC_parser.set_defaults(func=sz_mergeAC.run_merge)
 
-	fisher_parser = sub_parsers.add_parser("fisher", help="run Fisher's Exact Test at each SNP")
-	cmh_parser = sub_parsers.add_parser("cmh", help="run Cochran-Mantel-Haenszel test with multi-testing adjustment")
-	plot_parser = sub_parsers.add_parser("plot", help="making Manhattan and Q-Q plots")
-	adjust_parser = sub_parsers.add_parser("adjust", help="getting significant SNPs with FDR correction")
-	overlap_parser = sub_parsers.add_parser("overlap", help="overlapion of significant SNPs identified from two pools")
-	diff_parser = sub_parsers.add_parser("diff", help="get SNPs that significant in one replicate but not in the other")
-	return parser.parse_args()
+	usage = "Run Fisher's Exact Test at each SNP"
+	fisher_parser = sub_parsers.add_parser("fisher", help=usage)
+	fisher_parser.add_argument("-ac",
+								metavar="FILE",
+								dest="ac_file",
+								help="allele counts for one pool")
+	fisher_parser.add_argument("-outp",
+								metavar="PREFIX",
+								dest="outp",
+								default="poolseq_tk.fisher",
+								help="output file for Fisher's Exact tests")
+	fisher_parser.add_argument("-t",
+								metavar="INT",
+								dest="nproc",
+								type=int,
+								default=1,
+								help="Specify number of processes running simultaneously")
+	fisher_parser.add_argument("-adj_cutoff",
+								metavar="FLOAT",
+								dest="adj_cutoff",
+								type=float,
+								default=0.05,
+								help="specify the cutoff below which adjusted p-values will be considered as significant")
+	fisher_parser.add_argument("-adj_method",
+								metavar="STR",
+								dest="adj_method",
+								default="fdr",
+#								choices=["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"],
+								help="specify the adjustment methods. Only BH procedure supported")
+#	fisher_parser.add_argument("-direction",
+#							   metavar="STR",
+#							   dest="oddsr_direction",
+#							   choices=["greater", "less"],
+#							   help="specify whether odds ration greater, or less, than 1")
+	fisher_parser.set_defaults(func=sz_fisher.run_fisher)
 
-#	fisher_parser.set_defaults(func=run_fisher)
-#	cmh_parser.set_defaults(func=run_cmh)
-#	plot_parser.set_defaults(func=making_plot)
+	usage="run Cochran-Mantel-Haenszel test with multi-testing adjustment"
+	cmh_parser = sub_parsers.add_parser("cmh", help=usage)
+	cmh_parser.add_argument("-table",
+							metavar="FILE",
+							dest="table_file",
+							required=True,
+							help="output file with the table that CMH test run on")
+	cmh_parser.add_argument("-outp",
+							metavar="PREFIX",
+							dest="outp",
+							default="poolseq_tk.cmh",
+							required=True, help="output file with CMH test results")
+	cmh_parser.add_argument("-t",
+							metavar="INT",
+							dest="nproc",
+							type=int,
+							default=1,
+							help="Specify number of processes running simultaneously")
+	cmh_parser.add_argument("-adj_cutoff",
+							metavar="FLOAT",
+							dest="adj_cutoff",
+							type=float,
+							default=0.05,
+							help="specify the cutoff below which adjusted p-values will be considered as significant")
+	cmh_parser.add_argument("-adj_method",
+							metavar="STR",
+							dest="adj_method",
+							default="BH",
+							choices=["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"],
+							help="specify the adjustment methods")
+#	cmh_parser.add_argument("-direction",
+#							metavar="STR",
+#							dest="oddsr_direction",
+#							choices=["greater", "less"],
+#							help="specify whether odds ration greater, or less, than 1")
+	cmh_parser.set_defaults(func=sz_cmh.run_cmh)
+
+	usage = "Making Manhattan plot and QQ plot"
+	plot_parser = sub_parsers.add_parser("plot", help=usage)
+	plot_parser.add_argument("-i",
+							 metavar="FILE",
+							 dest="input",
+							 required=True,
+							 help="input file of test results with all SNPs")
+	plot_parser.add_argument("-highlight",
+							 metavar="FILE",
+							 dest="highlight_snps",
+							 help="file of a list of SNPs to be highlighted in the Manhattan plot")
+	plot_parser.add_argument("-outp",
+							 metavar="PREFIX",
+							 dest="outp",
+							 help="prefix of output file")
+	plot_parser.add_argument("-adj_cutoff",
+							 metavar="FLOAT",
+							 dest="adj_cutoff",
+							 type=float,
+							 default=0.05,
+							 help="specify the cutoff below which adjusted p-values will be considered as significant")
+	plot_mutual_group = plot_parser.add_mutually_exclusive_group(required=True)
+	plot_mutual_group.add_argument("-pdf",
+								   dest="pdf",
+								   action="store_true",
+								   help="output qqplot in pdf format")
+	plot_mutual_group.add_argument("-png",
+								   dest="png",
+								   action="store_true",
+								   help="output qqplot in pdf format. Probably not working!")
+	plot_parser.set_defaults(func=sz_plotting.making_plot)
+
+	adjust_parser = sub_parsers.add_parser("adjust", help="getting significant SNPs with FDR correction")
+	diff_parser = sub_parsers.add_parser("diff", help="get SNPs that significant in one replicate but not in the other")
+
+	usage = "Get overlaps of significant SNPs between replicates/pools"
+	overlap_parser = sub_parsers.add_parser("overlap", help=usage)
+	overlap_parser.add_argument("-a",
+								metavar="FILE",
+								dest="file_a",
+								help="significant SNPs identified from pool A")
+	overlap_parser.add_argument("-b",
+								metavar="FILE",
+								dest="file_b",
+								help="significant SNPs identified from pool B")
+	overlap_parser.add_argument("-o",
+								metavar="FILE",
+								dest="out",
+								help="output file of overlapion of significant SNPs identified from both pools")
+	overlap_parser.set_defaults(func=sz_overlap.run_overlap)
+
 #	adjust_parser.set_defaults(func=multi_testing_correction)
-#	overlap_parser.set_defaults(func=overlap)
 #	diff_parser.set_defaults(func=call_diff)
+
+	return parser.parse_args()
 
 def main():
 	args = getopts()
 	args.func(args)
-	#	subcommand = sys.argv[1]
-#	if subcommand == "collapse":
-#		import sz_collapse
-#		sz_collapse.run_collapse()
-#	elif subcommand == "filter":
-#		import sz_filter
-#		sz_filter.run_filter()
-#	elif subcommand == "mergeAC":
-#		import sz_mergeAC
-#		sz_mergeAC.run_merge()
-#	elif subcommand == "count":
-#		import sz_acount
-#		sz_acount.count_alleles()
-#	elif subcommand == "fisher":
-#		import sz_fisher
-#		sz_fisher.run_fisher()
-#	elif subcommand == "cmh":
-#		import sz_cmh
-#		sz_cmh.run_cmh()
-#	elif subcommand == "adjust":
-#		import sz_multitests_corr
-#		sz_multitests_corr.run_correction()
-#	elif subcommand == "overlap":
-#		import sz_overlap
-#		sz_overlap.overlap()
-#	elif subcommand == "diff":
-#		import sz_diff
-#		sz_diff.run_diff()
-#	elif subcommand == "plot":
-#		import sz_plotting
-#		sz_plotting.making_plot()
-#	else:
-#		show_subcommand_overviews()
 
 if __name__ == "__main__":
 	main()
