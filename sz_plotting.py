@@ -14,6 +14,7 @@ import os
 import sys
 import argparse
 import collections
+import math
 
 from colortext import ColorText
 import sz_utils
@@ -64,7 +65,7 @@ def making_plot(args):
 	ColorText().info(" [done]\n", "stderr")
 
 	ColorText().info("[poolseq_tk]: Making Manhattan plot ...", "stderr")
-	make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, out_manhattan)
+	make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, args.pcutoff, out_manhattan)
 	ColorText().info(" [done]\n", "stderr")
 
 def make_qqplots(grdevices, raw_pvals_vector, out_qqplot):
@@ -74,7 +75,7 @@ def make_qqplots(grdevices, raw_pvals_vector, out_qqplot):
 	qqman.qq(raw_pvals_vector, main="Q-Q plot for raw p-values using Fisher's Exact test")
 	grdevices.dev_off()
 
-def make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, out_manhattan):
+def make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, padj_cutoff, out_manhattan):
 	snp_names = []
 	snp_pos = []
 	chr_names = []
@@ -91,5 +92,5 @@ def make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, out_man
 	sig_snps = robjects.StrVector(snps_to_highlight)
 	qqman = rpackages.importr('qqman')
 	grdevices.pdf(out_manhattan)
-	qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps, col = color_vector, suggestiveline=3.716482, genomewideline=False, xlim=robjects.IntVector([20, 43]), ylim=robjects.IntVector([0,10]))
+	qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps, col = color_vector, suggestiveline=False, genomewideline=-1*math.log10(padj_cutoff), xlim=robjects.IntVector([20, 43]), ylim=robjects.IntVector([0,10]), main="Mahhatan Plot for Fisher's Exact tests on merged inverted pools")
 	grdevices.dev_off()
