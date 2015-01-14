@@ -70,6 +70,10 @@ def run_cmh(args):
 		raw_pvals_vector = robjects.FloatVector(raw_pvals)
 		padjust = robjects.r['p.adjust'](raw_pvals_vector, method=args.adj_method)
 		ColorText().info(" [done]\n", "stderr")
+		pcutoff = __bh_pvals_cutoff(pvals, args.adj_cutoff)
+		ColorText().info("[poolseq_tk]: p-value cutoff using Benjamini.Hochberg procedure %.5e"
+						 %(pcutoff), "stderr")
+		ColorText().info(" [done]\n", "stderr")
 
 		# output p-values
 		ColorText().info("[poolseq_tk]: output to files ...", "stderr")
@@ -86,6 +90,21 @@ def run_cmh(args):
 				sz_utils._results_outputter(fALL, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
 		ColorText().info(" [done]\n", "stderr")
 		ColorText().info("[poolseq_tk]: Program finishes successfully\n", "stderr")
+
+def __bh_pvals_cutoff(dPvals, fdr):
+	'''
+		Using BH procedure to calculate pvalue
+		cutoff at a FDR level
+	'''
+	lPvals = [dPvals[k] for k in dPvals.iterkeys()]
+	ntests = len(lPvals)
+	sort_lPvals = sorted(lPvals)
+	for i in range(len(sort_lPvals)):
+		if sort_lPvals[i] > (float(i+1)/ntests)*fdr :
+			return sort_lPvals[i - 1]
+	if i == len(sort_lPvals):
+		ColorText().error("[poolseq_tk] Fail to calculate pvalue cutoff\n")
+		sys.exit()
 
 def _cmh_worker(task_q, result_q, ntables_per_snp):
 	while True:
