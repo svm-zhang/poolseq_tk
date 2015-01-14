@@ -64,6 +64,9 @@ def run_fisher(args):
 		raw_pvals_vector = robjects.FloatVector(raw_pvals)
 		padjust = robjects.r['p.adjust'](raw_pvals_vector, method=args.adj_method)
 		ColorText().info(" [done]\n", "stderr")
+		ColorText().info("[poolseq_tk]: p-value cutoff using Benjamini.Hochberg procedure %.5e"
+						 %(__bh_pvals_cutoff(pvals, args.adj_cutoff)), "stderr")
+		ColorText().info(" [done]\n", "stderr")
 
 		# output p-values
 		ColorText().info("[poolseq_tk]: output to files ...", "stderr")
