@@ -228,12 +228,12 @@ def getopts():
 							 metavar="PREFIX",
 							 dest="outp",
 							 help="prefix of output file")
-	plot_parser.add_argument("-adj_cutoff",
+	plot_parser.add_argument("-pcutoff",
 							 metavar="FLOAT",
-							 dest="adj_cutoff",
+							 dest="pcutoff",
 							 type=float,
-							 default=0.05,
-							 help="specify the cutoff below which adjusted p-values will be considered as significant")
+							 default=1e-5,
+							 help="specify the p value cutoff to draw on the Mahhatan plot")
 	plot_mutual_group = plot_parser.add_mutually_exclusive_group(required=True)
 	plot_mutual_group.add_argument("-pdf",
 								   dest="pdf",
