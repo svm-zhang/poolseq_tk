@@ -16,6 +16,7 @@ import sz_fisher
 import sz_cmh
 import sz_plotting
 import sz_overlap
+import sz_prepVCF
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -44,6 +45,32 @@ class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 def getopts():
 	parser = argparse.ArgumentParser(description="Toolkits for Genome-wide Association Mapping using Pooled Sequencing")
 	sub_parsers = parser.add_subparsers(title="Commands", metavar="", dest="command")
+
+	usage = "Preparing VCF file from tests result file for snpEff"
+	prepVCF_parser = sub_parsers.add_parser("vcf", help=usage)
+	prepVCF_parser.add_argument("-i",
+								metavar="FILE",
+								dest="infile",
+								required="True",
+								help="test result file generated from poolseq_tk.py fisher or poolseq_tk.py cmh")
+	prepVCF_parser.add_argument("-o",
+								metavar="FILE",
+								dest="out",
+								type=argparse.FileType('w'),
+								default=sys.stdout,
+								help="output in VCF format. Default: STDOUT")
+	prepVCF_parser.add_argument("-samples",
+								metavar="LIST",
+								dest="samples",
+								default="table1,table2,table3,table4",
+								help="a list of sample names separated by comma")
+	prepVCF_parser.add_argument("-filter",
+								metavar="EXPR",
+								nargs='*',
+								dest="filters",
+								default=list(),
+								help="a set of filters to apply. Only support INFO field ratio, e.g. ratio>1")
+	prepVCF_parser.set_defaults(func=sz_prepVCF.run_prepVCF)
 
 	# Collapsing two mpileup files
 	usage = "Collapsing two pileup files at corresponding SNPs"
