@@ -15,7 +15,6 @@
 
 '''
 
-import argparse
 import collections
 import sys
 import os
