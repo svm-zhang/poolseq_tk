@@ -56,16 +56,20 @@ def run_count(args):
 		fOUT = open(args.out, 'w')
 	ColorText().info("[poolseq_tk] outputting allele counts to table ...", "stderr")
 	for pos in sorted(ac.iterkeys()):
-		fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
 		i = 3
 		if len(args.pileups) != 1:
-			while i <= len(ac[pos])-4:
-				fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
-				i += 4
+			# this deals with case where some pools have no data at this site
+			if len(ac[pos][i:]) >= 2*len(args.pileups):
+				fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
+				while i <= len(ac[pos])-4:
+					fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
+					i += 4
+				fOUT.write("\n")
 		else:			# case where only one pileup file provided
+			fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
 			while i <= len(ac[pos])-2:
 				fOUT.write("\t%s" %(":".join(ac[pos][i:i+2])))
 				i += 2
-		fOUT.write("\n")
+			fOUT.write("\n")
 	ColorText().info(" [done]\n", "stderr")
 	fOUT.close()
