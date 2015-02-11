@@ -148,7 +148,7 @@ def parseReadsBases(reads_bases, refBase, altBase):
 		nReadsBases += 1
 	return reads_bases_viewed, nReadsBases, nRefBases, dMultiBases, dIndels
 
-def getSNPs(isnps):
+def getSNPs(isnp):
 	'''
 		getting polymorphic sties from file
 		file format:
@@ -157,8 +157,9 @@ def getSNPs(isnps):
 					3. ref allele
 					4. alt allele
 	'''
+	check_if_files_exist(isnp)
 	dSNPs = collections.defaultdict(tuple)
-	with open(isnps, 'r') as fSNPS:
+	with open(isnp, 'r') as fSNPS:
 		for line in fSNPS:
 			tmp_line = line.strip().split("\t")
 			chr = tmp_line[0]
