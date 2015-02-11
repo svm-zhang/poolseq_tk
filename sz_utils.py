@@ -38,6 +38,21 @@ def calculate_min_power(alpha):
 			power += 1
 	return power
 
+def getFDR_BH(dPvals, fdr_level):
+	'''
+		Using BH procedure to calculate pvalue
+		cutoff at a FDR level
+	'''
+	lPvals = [dPvals[k] for k in dPvals.iterkeys()]
+	ntests = len(lPvals)
+	sort_lPvals = sorted(lPvals)
+	for i in range(len(sort_lPvals)):
+		if sort_lPvals[i] > (float(i+1)/ntests)*fdr_level :
+			return sort_lPvals[i - 1]
+	if i == len(sort_lPvals):
+		ColorText().error("[poolseq_tk] Fail to calculate pvalue cutoff\n")
+		sys.exit()
+
 def cat_split_files(file_list, out_file):
 	''' concatenate split files '''
 	with open(out_file, 'w') as fOUT:
