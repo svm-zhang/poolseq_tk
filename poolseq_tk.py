@@ -17,6 +17,7 @@ import sz_cmh
 import sz_plotting
 import sz_overlap
 import sz_prepVCF
+import sz_view
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -70,7 +71,29 @@ def getopts():
 								dest="filters",
 								default=list(),
 								help="a set of filters to apply. Only support INFO field ratio, e.g. ratio>1")
+	prepVCF_parser.add_argument("-fst",
+								metavar="FILE",
+								dest="ifst",
+								help="a file of Fst values")
 	prepVCF_parser.set_defaults(func=sz_prepVCF.run_prepVCF)
+
+	usage = "Viewing mpileup file (transforming 5th column in mpileup into human readable letters)"
+	view_parser = sub_parsers.add_parser("view", help=usage)
+	view_parser.add_argument("-mpileup",
+							 metavar="FILE",
+							 dest="ipileup",
+							 required=True,
+							 help="mpileup file")
+	view_parser.add_argument("-snp",
+							 metavar="FILE",
+							 dest="isnp",
+							 required=True,
+							 help="tab-delimited snp file with four columns: chr, pos, ref, alt")
+	view_parser.add_argument("-o",
+							 metavar="FILE",
+							 dest="out",
+							 help="tab-delimited file with five columns: chr, pos, ref, alt, transformed reads bases ")
+	view_parser.set_defaults(func=sz_view.viewPileup)
 
 	# Collapsing two mpileup files
 	usage = "Collapsing two pileup files at corresponding SNPs"
