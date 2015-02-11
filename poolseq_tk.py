@@ -219,11 +219,12 @@ def getopts():
 								default="fdr",
 #								choices=["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"],
 								help="specify the adjustment methods. Only BH procedure supported")
-#	fisher_parser.add_argument("-direction",
-#							   metavar="STR",
-#							   dest="oddsr_direction",
-#							   choices=["greater", "less"],
-#							   help="specify whether odds ration greater, or less, than 1")
+	fisher_parser.add_argument("-direction",
+							   metavar="STR",
+							   dest="oddsr_direction",
+							   choices=["greater", "less"],
+							   required=True,
+							   help="specify whether odds ration greater, or less, than 1")
 	fisher_parser.set_defaults(func=sz_fisher.run_fisher)
 
 	usage="run Cochran-Mantel-Haenszel test with multi-testing adjustment"
@@ -256,11 +257,12 @@ def getopts():
 							default="BH",
 							choices=["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"],
 							help="specify the adjustment methods")
-#	cmh_parser.add_argument("-direction",
-#							metavar="STR",
-#							dest="oddsr_direction",
-#							choices=["greater", "less"],
-#							help="specify whether odds ration greater, or less, than 1")
+	cmh_parser.add_argument("-direction",
+							metavar="STR",
+							dest="oddsr_direction",
+							choices=["greater", "less"],
+							   required=True,
+							help="specify whether odds ration greater, or less, than 1")
 	cmh_parser.set_defaults(func=sz_cmh.run_cmh)
 
 	usage = "Making Manhattan plot and QQ plot"
@@ -282,8 +284,30 @@ def getopts():
 							 metavar="FLOAT",
 							 dest="pcutoff",
 							 type=float,
-							 default=1e-5,
 							 help="specify the p value cutoff to draw on the Mahhatan plot")
+	plot_parser.add_argument("-fdrlevel",
+							  metavar="FLOAT",
+							  dest="fdrlevel",
+							  type=float,
+							  default=0.05,
+							  help="specify at which level FDR will be applied")
+	plot_parser.add_argument("-qqtitle",
+							  metavar="STR",
+							  dest="qqtitle",
+							  help="specify the title for QQ plot")
+	plot_parser.add_argument("-manx",
+							  metavar="STR",
+							  dest="manx",
+							  help="specify xlab for manhattan plot")
+	plot_parser.add_argument("-manxlim",
+							  metavar="STR",
+							  dest="manxlim",
+							  default="-",
+							  help="an interval defined by min and max, sperated by comma, e.g. 19,27. Default=\"-\"")
+	plot_parser.add_argument("-mantitle",
+							  metavar="STR",
+							  dest="mantitle",
+							  help="specify the title for Manhattan plot")
 	plot_mutual_group = plot_parser.add_mutually_exclusive_group(required=True)
 	plot_mutual_group.add_argument("-pdf",
 								   dest="pdf",
