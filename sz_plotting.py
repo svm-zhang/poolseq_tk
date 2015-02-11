@@ -80,7 +80,7 @@ def making_plot(args):
 	ColorText().info("[poolseq_tk]: Making Manhattan plot ...", "stderr")
 	make_manhattan(grdevices, data, raw_pvals_vector,
 				   snps_to_highlight, pcutoff,
-				   out_manhattan, args.mantitle, args.manx)
+				   out_manhattan, args.mantitle, args.manx, args.manxlim)
 	ColorText().info(" [done]\n", "stderr")
 
 def make_qqplots(grdevices, raw_pvals_vector, out_qqplot, title=""):
@@ -92,7 +92,7 @@ def make_qqplots(grdevices, raw_pvals_vector, out_qqplot, title=""):
 
 def make_manhattan(grdevices, data, raw_pvals_vector,
 				   snps_to_highlight, padj_cutoff,
-				   out_manhattan, title="", xlable=""):
+				   out_manhattan, title="", xlable="", xlim="-"):
 	snp_names = []
 	snp_pos = []
 	chr_names = []
@@ -109,9 +109,17 @@ def make_manhattan(grdevices, data, raw_pvals_vector,
 	sig_snps = robjects.StrVector(snps_to_highlight)
 	qqman = rpackages.importr('qqman')
 	grdevices.pdf(out_manhattan)
-	qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps,
-					col = color_vector, suggestiveline=False,
-					genomewideline=-1*math.log10(padj_cutoff),
-					xlim=robjects.IntVector([19, 27]),
-					xlab=xlable, main=title)
+	if xlim != "-":
+		xmin = int(xlim.split(",")[0])
+		xmax = int(xlim.split(",")[1])
+		qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps,
+						col = color_vector, suggestiveline=False,
+						genomewideline=-1*math.log10(padj_cutoff),
+						xlim=robjects.IntVector([xmin, xmax]),
+						xlab=xlable, main=title)
+	else:
+		qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps,
+						col = color_vector, suggestiveline=False,
+						genomewideline=-1*math.log10(padj_cutoff),
+						xlab=xlable, main=title)
 	grdevices.dev_off()
