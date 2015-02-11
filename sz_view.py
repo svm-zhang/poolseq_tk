@@ -4,10 +4,16 @@ import collections
 
 from colortext import ColorText
 from sz_utils import parseReadsBases, getSNPs
+from sz_utils import check_if_files_exist, make_dirs_if_necessary
 
-def viewPileup(ipileup, out, dSNPs):
+def viewPileup(args):
+	check_if_files_exist(args.ipileup)
+	make_dirs_if_necessary(args.out)
+
+	dSNPs = getSNPs(args.isnp)
+	fOUT = open(args.out, 'w')
 	nRemoved = 0
-	with open(ipileup, 'r') as fIN:
+	with open(args.ipileup, 'r') as fIN:
 		for line in fIN:
 			tmp_line = line.strip().split("\t")
 			chr = tmp_line[0]
@@ -21,7 +27,7 @@ def viewPileup(ipileup, out, dSNPs):
 						continue
 					reads_bases = tmp_line[4]
 					reads_bases_viewed, nReadsBases, nRefBases, dMultiBases, dIndels = parseReadsBases(reads_bases, refBase, altBase)
-					out.write("%s\t%d\t%s\t%s\t%s\n" %(chr, pos, refBase, altBase,
+					fOUT.write("%s\t%d\t%s\t%s\t%s\n" %(chr, pos, refBase, altBase,
 													   reads_bases_viewed))
 
 					# the following is a checkup on other alleles
@@ -43,19 +49,9 @@ def viewPileup(ipileup, out, dSNPs):
 					sys.stderr.write(line)
 					sys.exit()
 				del dSNPs[chr, pos]
+	fOUT.close()
 
 	ColorText().info("[poolseq_tk]: There are %d sites where more than 2 alleles occur\n"
 					 %(nRemoved), "stderr")
 	ColorText().info("[poolseq_tk]: There are %d SNPs having no reads coverage for this dataset\n"
 					 %(len(dSNPs)), "stderr")
-
-def main():
-	ipileup = sys.argv[1]
-	isnps = sys.argv[2]
-	out = sys.stdout
-
-	dSNPs = getSNPs(isnps)
-	viewPileup(ipileup, out, dSNPs)
-
-if __name__ == "__main__":
-	main()
