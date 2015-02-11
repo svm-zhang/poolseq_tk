@@ -43,12 +43,25 @@ def making_plot(args):
 			pvals[int(tmp_line[1])] = float(tmp_line[-3])
 	ColorText().info(" [done]\n", "stderr")
 
-	# get SNPs of interests
+	# get FDR cutoff using BH if not provided through command line
+	pcutoff = 0.0
+	if not args.pcutoff:
+		ColorText().info("[poolseq_tk]: Getting p-value cutoff at FDR %d%%: " %(args.fdrlevel*100), "stderr")
+		pcutoff = sz_utils.getFDR_BH(pvals, args.fdrlevel)
+		ColorText().info("%.5e\n" %(pcutoff), "stderr")
+	else:
+		pcutoff = args.pcutoff
+		ColorText().info("[poolseq_tk]: p-value cutoff provided: %.5e\n" %(pcutoff), "stderr")
+
+	# get SNPs to highlight
 	snps_to_highlight = []
 	if args.highlight_snps:
+		ColorText().info("[poolseq_tk]: Getting SNPs to be highlighed in Manhattan plot ... ", "stderr")
 		with open(args.highlight_snps, 'r') as fHIGHLIGHT:
 			for line in fHIGHLIGHT:
-				snps_to_highlight.append(line.strip())
+				tmp_line = line.strip().split("\t")
+				snps_to_highlight.append('_'.join(tmp_line[:2]))
+	ColorText().info(" [done]\n", "stderr")
 
 	if args.pdf:
 		out_qqplot = args.outp + ".qqplot.pdf"
@@ -61,21 +74,25 @@ def making_plot(args):
 	raw_pvals_vector = robjects.FloatVector([pvals[k] for k in sorted(pvals.iterkeys())])
 
 	ColorText().info("[poolseq_tk]: Making Q-Q plot ...", "stderr")
-	make_qqplots(grdevices, raw_pvals_vector, out_qqplot)
+	make_qqplots(grdevices, raw_pvals_vector, out_qqplot, args.qqtitle)
 	ColorText().info(" [done]\n", "stderr")
 
 	ColorText().info("[poolseq_tk]: Making Manhattan plot ...", "stderr")
-	make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, args.pcutoff, out_manhattan)
+	make_manhattan(grdevices, data, raw_pvals_vector,
+				   snps_to_highlight, pcutoff,
+				   out_manhattan, args.mantitle, args.manx)
 	ColorText().info(" [done]\n", "stderr")
 
-def make_qqplots(grdevices, raw_pvals_vector, out_qqplot):
+def make_qqplots(grdevices, raw_pvals_vector, out_qqplot, title=""):
 	''' making qqplot '''
 	qqman = rpackages.importr('qqman')
 	grdevices.pdf(out_qqplot)
-	qqman.qq(raw_pvals_vector, main="Q-Q plot for raw p-values using Fisher's Exact test")
+	qqman.qq(raw_pvals_vector, main=title)
 	grdevices.dev_off()
 
-def make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, padj_cutoff, out_manhattan):
+def make_manhattan(grdevices, data, raw_pvals_vector,
+				   snps_to_highlight, padj_cutoff,
+				   out_manhattan, title="", xlable=""):
 	snp_names = []
 	snp_pos = []
 	chr_names = []
@@ -92,5 +109,9 @@ def make_manhattan(grdevices, data, raw_pvals_vector, snps_to_highlight, padj_cu
 	sig_snps = robjects.StrVector(snps_to_highlight)
 	qqman = rpackages.importr('qqman')
 	grdevices.pdf(out_manhattan)
-	qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps, col = color_vector, suggestiveline=False, genomewideline=-1*math.log10(padj_cutoff), xlim=robjects.IntVector([20, 43]), ylim=robjects.IntVector([0,10]), main="Mahhatan Plot for Fisher's Exact tests on merged inverted pools")
+	qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps,
+					col = color_vector, suggestiveline=False,
+					genomewideline=-1*math.log10(padj_cutoff),
+					xlim=robjects.IntVector([19, 27]),
+					xlab=xlable, main=title)
 	grdevices.dev_off()
