@@ -83,3 +83,89 @@ def _results_outputter(fHANDLE, pos, chr, bases, tables, pval, corr_pval, odds_r
 		i += 4
 	fHANDLE.write("\t%.8f\t%.8f\t%.8f\n" %(pval, corr_pval, odds_ratio))
 	fHANDLE.flush()
+
+def parseReadsBases(reads_bases, refBase, altBase):
+	'''
+		parsing the 5th column in a mpileup file
+		5th column represents the bases on the reads
+		covering the given site
+	'''
+	i = 0
+	dIndels = {}
+	dMultiBases = {}
+	nRefBases, nAltBases = 0, 0
+	nReadsBases = 0
+	reads_bases_viewed = ""
+	while i < len(reads_bases):
+		# ref forward
+		if reads_bases[i] == '.':
+			reads_bases_viewed += refBase
+			nRefBases += 1
+			i += 1
+		# ref reverse
+		elif reads_bases[i] == ',':
+			reads_bases_viewed += refBase.lower()
+			nRefBases += 1
+			i += 1
+		# alt forward
+		elif reads_bases[i] == altBase:
+			reads_bases_viewed += altBase
+			nAltBases += 1
+			i += 1
+		# alt reverse
+		elif reads_bases[i] ==  altBase.lower():
+			reads_bases_viewed += altBase.lower()
+			nAltBases += 1
+			i += 1
+		# indels
+		elif reads_bases[i] in ['+', '-', '*']:
+			indel = ""
+			if reads_bases[i] == '*':
+				i += 1
+				indel = '*'
+			else:
+				len_indel = int(reads_bases[i+1])
+				indel = reads_bases[i+2:i+2+len_indel].upper()
+				i += len_indel + 1 + 1
+			if indel not in dIndels:
+				dIndels[indel] = 1
+			else:
+				dIndels[indel] += 1
+		# at begining
+		elif reads_bases[i] == '^':
+			i += 2
+		# at ends, or gap
+		elif reads_bases[i] in ['N', 'n', '$']:
+			i += 1
+		# other alleles
+		else:
+			if reads_bases[i] not in dMultiBases:
+				dMultiBases[reads_bases[i]] = 1
+			else:
+				dMultiBases[reads_bases[i]] += 1
+			reads_bases_viewed += reads_bases[i]
+			i += 1
+		nReadsBases += 1
+	return reads_bases_viewed, nReadsBases, nRefBases, dMultiBases, dIndels
+
+def getSNPs(isnps):
+	'''
+		getting polymorphic sties from file
+		file format:
+					1. chr name
+					2. pos
+					3. ref allele
+					4. alt allele
+	'''
+	dSNPs = collections.defaultdict(tuple)
+	with open(isnps, 'r') as fSNPS:
+		for line in fSNPS:
+			tmp_line = line.strip().split("\t")
+			chr = tmp_line[0]
+			pos = int(tmp_line[1])
+			refBase = tmp_line[2]
+			altBase = tmp_line[3]
+			if not (chr, pos) in dSNPs:
+				dSNPs[chr, pos] = (refBase, altBase)
+
+	return dSNPs
