@@ -46,9 +46,14 @@ def getFDR_BH(dPvals, fdr_level):
 	lPvals = [dPvals[k] for k in dPvals.iterkeys()]
 	ntests = len(lPvals)
 	sort_lPvals = sorted(lPvals)
-	for i in range(len(sort_lPvals)):
+#	print sort_lPvals[:10]
+	for i in xrange(len(sort_lPvals)):
 		if sort_lPvals[i] > (float(i+1)/ntests)*fdr_level :
-			return sort_lPvals[i - 1]
+#			print i, ntests, (float(i+1)/ntests)*fdr_level, sort_lPvals[i], sort_lPvals[i-1]
+			if i == 0:
+				return 0.00000000
+			else:
+				return sort_lPvals[i - 1]
 	if i == len(sort_lPvals):
 		ColorText().error("[poolseq_tk] Fail to calculate pvalue cutoff\n")
 		sys.exit()
