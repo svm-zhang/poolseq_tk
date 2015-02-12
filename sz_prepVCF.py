@@ -53,11 +53,14 @@ def run_prepVCF(args):
 		dfst = getFst(args.ifst, dfst)
 
 	dfilters = getFilters(args.filters)
-	outVCFHeaders(args.samples, args.out)
+
+	sz_utils.make_dirs_if_necessary(args.out)
+	fOUT = open(args.out, 'w')
+	outVCFHeaders(args.samples, fOUT)
 	with open(args.infile, "r") as fIN:
 		for line in fIN:
 			tmp_line = line.strip().split("\t")
-			chr = "2L"
+			chr = tmp_line[0]
 			pos = int(tmp_line[1])
 			refBase = tmp_line[2]
 			altBase = tmp_line[3]
@@ -79,18 +82,18 @@ def run_prepVCF(args):
 				pass
 			if "corrPval" in dfilters:		# fix later
 				pass
-			args.out.write("2L\t%s\t.\t%s\t%s\t.\t.\t"
-							%(pos, refBase, altBase))
+			fOUT.write("%s\t%s\t.\t%s\t%s\t.\t.\t"
+							%(chr, pos, refBase, altBase))
 			if fst == -1.0:
-				args.out.write("pval=%.5g;corrPval=%.5f;ratio=%.5f;fst=N/A\t"
+				fOUT.write("pval=%.5g;corrPval=%.5f;ratio=%.5f\t"
 								%(pval, corrPval, ratio))
 			else:
-				args.out.write("pval=%.5g;corrPval=%.5f;ratio=%.5f;fst=%.5f\t"
+				fOUT.write("pval=%.5g;corrPval=%.5f;ratio=%.5f;fst=%.5f\t"
 								%(pval, corrPval, ratio, fst))
-			args.out.write("GT:Table")
+			fOUT.write("GT:Table")
 			poolIndex = 1
 			for i in range(len(tmp_line[4:-3])):
 				table = tmp_line[4:-3][i].replace(':', '-')
-				args.out.write("\t./.:%s" %(table))
-			args.out.write("\n")
-	args.out.close()
+				fOUT.write("\t./.:%s" %(table))
+			fOUT.write("\n")
+	fOUT.close()
