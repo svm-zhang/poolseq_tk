@@ -57,9 +57,7 @@ def getopts():
 	prepVCF_parser.add_argument("-o",
 								metavar="FILE",
 								dest="out",
-								type=argparse.FileType('w'),
-								default=sys.stdout,
-								help="output in VCF format. Default: STDOUT")
+								help="output in VCF format.")
 	prepVCF_parser.add_argument("-samples",
 								metavar="LIST",
 								dest="samples",
