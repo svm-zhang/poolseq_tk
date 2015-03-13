@@ -34,7 +34,7 @@ import rpy2.rlike.container as rlc
 def run_cmh(args):
 	''' run Cochran-Mantel-Hasenzle test '''
 
-	sz_utils.make_dirs_if_necessary(os.path.dirname(args.outp))
+	sz_utils.make_dirs_if_necessary(args.outp)
 	allele_counts = {}
 	pvals = {}
 	tables = collections.defaultdict(list)
@@ -44,7 +44,7 @@ def run_cmh(args):
 
 	task_q = mp.JoinableQueue()
 	result_q = mp.Queue()
-	_create_procs(args.nproc,task_q, result_q, ntables_per_snp)
+	_create_procs(args.nproc,task_q, result_q, ntables_per_snp, args.outp)
 	sz_utils._assign_tables(tables, task_q, args.nproc)
 
 	# waiting for all tasks to be finished
@@ -57,9 +57,22 @@ def run_cmh(args):
 		# merge results
 		pvals, odds_ratios = {}, {}
 		while args.nproc:
-			pvals_split, odds_ratios_split = result_q.get()
-			pvals.update(pvals_split)
-			odds_ratios.update(odds_ratios_split)
+			file = result_q.get()
+			print file
+			with open(file, 'r') as fIN:
+				for line in fIN:
+					tmp_line = line.strip().split("\t")
+					pos = int(tmp_line[0])
+					pval = float(tmp_line[1])
+					odds_ratio = float(tmp_line[2])
+					if pos not in pvals:
+						pvals[pos] = pval
+					if pos not in odds_ratios:
+						odds_ratios[pos] = odds_ratio
+			os.remove(file)
+#			pvals_split, odds_ratios_split = result_q.get()
+#			pvals.update(pvals_split)
+#			odds_ratios.update(odds_ratios_split)
 			args.nproc -= 1
 		ColorText().info("[poolseq_tk]: Running CMH tests successfully\n", "stderr")
 
@@ -94,7 +107,7 @@ def run_cmh(args):
 		ColorText().info(" [done]\n", "stderr")
 		ColorText().info("[poolseq_tk]: Program finishes successfully\n", "stderr")
 
-def _cmh_worker(task_q, result_q, ntables_per_snp):
+def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 	while True:
 		try:
 			table_part, nth_job = task_q.get()
@@ -102,7 +115,10 @@ def _cmh_worker(task_q, result_q, ntables_per_snp):
 			ColorText().info("[poolseq_tk]: %s running Cochran-Mantel-Haenszel test on %d tables ...\n"
 							 %(mp.current_process().name, len(table_part)),
 							 "stderr")
+			tmpFile = outp + "." + mp.current_process().name + ".cmh"
+			fOUT = open(tmpFile, 'w')
 #			j = 0
+			nTests = 0
 			for pos in sorted(table_part.iterkeys()):
 #				if j == 0:
 #					print mp.current_process().name, pos, table_part[pos]
@@ -122,20 +138,28 @@ def _cmh_worker(task_q, result_q, ntables_per_snp):
 				if len(array) == ntables_per_snp*4:
 					dim_vector = robjects.IntVector([2, 2, ntables_per_snp])
 					data = robjects.r['array'](robjects.IntVector(array), dim=dim_vector)
-					rcmh = robjects.r['mantelhaen.test'](data, alternative='t', exact=True)
-					pvals[pos] = float(rcmh[1][0])
-					odds_ratios[pos] = float(rcmh[3][0])
+					rcmh = robjects.r['mantelhaen.test'](data, alternative='t')
+#					print rcmh
+#					print rcmh[1][0]
+#					print rcmh[3][0]
+#					sys.exit()
+					nTests += 1
+					fOUT.write("%d\t%.8f\t%.8f\n" %(pos, rcmh[1][0], rcmh[3][0]))
+#					pvals[pos] = float(rcmh[1][0])
+#					odds_ratios[pos] = float(rcmh[3][0])
+			fOUT.close()
 			ColorText().info("[poolseq_tk]: %s ran %d tests\n"
-							 %(mp.current_process().name, len(pvals)),
+							 %(mp.current_process().name, nTests),
 							 "stderr")
-			result_q.put((pvals, odds_ratios))
+			result_q.put(tmpFile)
+#			result_q.put((pvals, odds_ratios))
 		finally:
 			task_q.task_done()
 
-def _create_procs(nproc, task_q, result_q, ntables_per_snp):
+def _create_procs(nproc, task_q, result_q, ntables_per_snp, outp):
 	''' initialize processes '''
 	ColorText().info("[poolseq_tk] Initializing processes ...\n", "stderr")
 	for _ in range(nproc):
-		p = mp.Process(target=_cmh_worker, args=(task_q, result_q, ntables_per_snp))
+		p = mp.Process(target=_cmh_worker, args=(task_q, result_q, ntables_per_snp, outp))
 		p.daemon = True
 		p.start()
