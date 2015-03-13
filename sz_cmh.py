@@ -58,7 +58,6 @@ def run_cmh(args):
 		pvals, odds_ratios = {}, {}
 		while args.nproc:
 			file = result_q.get()
-			print file
 			with open(file, 'r') as fIN:
 				for line in fIN:
 					tmp_line = line.strip().split("\t")
@@ -117,12 +116,8 @@ def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 							 "stderr")
 			tmpFile = outp + "." + mp.current_process().name + ".cmh"
 			fOUT = open(tmpFile, 'w')
-#			j = 0
 			nTests = 0
 			for pos in sorted(table_part.iterkeys()):
-#				if j == 0:
-#					print mp.current_process().name, pos, table_part[pos]
-#					j += 1
 				array = []
 				i = 0
 				while i <= len(table_part[pos])-4:
@@ -139,10 +134,6 @@ def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 					dim_vector = robjects.IntVector([2, 2, ntables_per_snp])
 					data = robjects.r['array'](robjects.IntVector(array), dim=dim_vector)
 					rcmh = robjects.r['mantelhaen.test'](data, alternative='t')
-#					print rcmh
-#					print rcmh[1][0]
-#					print rcmh[3][0]
-#					sys.exit()
 					nTests += 1
 					fOUT.write("%d\t%.8f\t%.8f\n" %(pos, rcmh[1][0], rcmh[3][0]))
 #					pvals[pos] = float(rcmh[1][0])
