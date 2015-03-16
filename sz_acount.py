@@ -33,6 +33,7 @@ def run_count(args):
 			for line in fMPILEUP:
 				nsnps += 1
 				tmp_line = line.strip().split("\t")
+				chr = tmp_line[0]
 				pos = int(tmp_line[1])
 				ref_base = tmp_line[2]
 				alt_base = tmp_line[3]
@@ -42,10 +43,14 @@ def run_count(args):
 								tmp_line[-1].count(ref_base.lower())
 					alt_count = tmp_line[-1].count(alt_base) + \
 								tmp_line[-1].count(alt_base.lower())
-				if pos not in ac:
-					ac[pos] = [tmp_line[0], ref_base, alt_base, str(ref_count), str(alt_count)]
+				if (chr, pos) not in ac:
+					ac[chr, pos] = [ref_base, alt_base, str(ref_count), str(alt_count)]
 				else:
-					ac[pos] += [str(ref_count), str(alt_count)]
+					ac[chr, pos] += [str(ref_count), str(alt_count)]
+#				if pos not in ac:
+#					ac[pos] = [chr, ref_base, alt_base, str(ref_count), str(alt_count)]
+#				else:
+#					ac[pos] += [str(ref_count), str(alt_count)]
 		ColorText().info(" %d SNPs parsed\n" %(nsnps), "stderr")
 
 	fOUT = None
@@ -55,21 +60,29 @@ def run_count(args):
 		sz_utils.make_dirs_if_necessary(args.out)
 		fOUT = open(args.out, 'w')
 	ColorText().info("[poolseq_tk] outputting allele counts to table ...", "stderr")
-	for pos in sorted(ac.iterkeys()):
-		i = 3
-		if len(args.pileups) != 1:
-			# this deals with case where some pools have no data at this site
-			if len(ac[pos][i:]) >= 2*len(args.pileups):
-				fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
-				while i <= len(ac[pos])-4:
-					fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
-					i += 4
-				fOUT.write("\n")
-		else:			# case where only one pileup file provided
-			fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
-			while i <= len(ac[pos])-2:
-				fOUT.write("\t%s" %(":".join(ac[pos][i:i+2])))
-				i += 2
+	for (chr, pos) in sorted(ac.iterkeys()):
+		i = 2
+		if len(ac[chr, pos][i:]) == 2*len(args.pileups):
+			fOUT.write("%s\t%d\t%s" %(chr, pos, "\t".join(ac[chr, pos][1:3])))
+			while i <= len(ac[chr, pos])-4:
+				fOUT.write("\t%s" %(":".join(ac[chr, pos][i:i+4])))
+				i += 4
 			fOUT.write("\n")
+		else:
+			pass
+#		if len(args.pileups) != 1:
+#			# this deals with case where some pools have no data at this site
+#			if len(ac[pos][i:]) >= 2*len(args.pileups):
+#				fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
+#				while i <= len(ac[pos])-4:
+#					fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
+#					i += 4
+#				fOUT.write("\n")
+#		else:			# case where only one pileup file provided
+#			fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
+#			while i <= len(ac[pos])-2:
+#				fOUT.write("\t%s" %(":".join(ac[pos][i:i+2])))
+#				i += 2
+#			fOUT.write("\n")
 	ColorText().info(" [done]\n", "stderr")
 	fOUT.close()
