@@ -74,12 +74,13 @@ def _count2table(ac_file):
 			tmp_line = line.strip().split("\t")
 			if ntables_per_snp == 0:
 				ntables_per_snp = len(tmp_line[4:])
+			chr = tmp_line[0]
 			pos = int(tmp_line[1])
 			base1 = tmp_line[2]
 			base2 = tmp_line[3]
-			tables[pos] = [tmp_line[0], base1, base2]		# chr, allele1, allele2
+			tables[chr, pos] = [tmp_line[0], base1, base2]		# chr, allele1, allele2
 			for counts in tmp_line[4:]:
-				tables[pos] += counts.split(':')			# counts
+				tables[chr, pos] += counts.split(':')			# counts
 	ColorText().info(" [done]\n", "stderr")
 	return tables, ntables_per_snp
 
