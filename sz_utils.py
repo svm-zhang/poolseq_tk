@@ -46,7 +46,6 @@ def getFDR_BH(dPvals, fdr_level):
 	lPvals = [dPvals[k] for k in dPvals.iterkeys()]
 	ntests = len(lPvals)
 	sort_lPvals = sorted(lPvals)
-#	print sort_lPvals[:10]
 	for i in xrange(len(sort_lPvals)):
 		if sort_lPvals[i] > (float(i+1)/ntests)*fdr_level :
 #			print i, ntests, (float(i+1)/ntests)*fdr_level, sort_lPvals[i], sort_lPvals[i-1]
@@ -64,7 +63,7 @@ def cat_split_files(file_list, out_file):
 		for file in sorted(file_list):
 			shutil.copyfileobj(open(file, 'r'), fOUT)
 
-def _count2table(ac_file):
+def _count2table(ac_file, max_cov = 100):
 	ColorText().info("[poolseq_tk]: reading counts and preparing 2*2 tables ...",
 					 "stderr")
 	tables = collections.defaultdict(list)
@@ -80,7 +79,14 @@ def _count2table(ac_file):
 			base2 = tmp_line[3]
 			tables[chr, pos] = [tmp_line[0], base1, base2]		# chr, allele1, allele2
 			for counts in tmp_line[4:]:
-				tables[chr, pos] += counts.split(':')			# counts
+				tmp_counts = counts.split(':')
+				if sum(map(int, tmp_counts[0:2])) <= max_cov:
+					tables[chr, pos] += tmp_counts[:2]
+				if sum(map(int, tmp_counts[2:4])) <= max_cov:
+					tables[chr, pos] += tmp_counts[2:]
+#					tables[chr, pos] += counts.split(':')			# counts
+			if len(tables[chr, pos]) < len(tmp_line[4:])*4+3:
+				del tables[chr, pos]
 	ColorText().info(" [done]\n", "stderr")
 	return tables, ntables_per_snp
 
@@ -96,13 +102,13 @@ def _assign_tables(tables, task_q, nproc):
 		nth_job += 1
 	task_q.put((dict(sorted(tables.items())[i:]), nth_job))
 
-def _results_outputter(fHANDLE, pos, chr, bases, tables, pval, corr_pval, odds_ratio):
+def _results_outputter(fHANDLE, pos, chr, bases, tables, pval, log10_pval, corr_pval, odds_ratio):
 	fHANDLE.write("%s\t%d\t%s" %(chr, pos, bases))
 	i = 0
 	while i <= len(tables) - 4:
 		fHANDLE.write("\t%s" %(":".join(tables[i:i+4])))
 		i += 4
-	fHANDLE.write("\t%.8f\t%.8f\t%.8f\n" %(pval, corr_pval, odds_ratio))
+	fHANDLE.write("\t%.8f\t%s\t%.8f\t%.8f\n" %(pval, str(log10_pval), corr_pval, odds_ratio))
 	fHANDLE.flush()
 
 def parseReadsBases(reads_bases, refBase, altBase):
