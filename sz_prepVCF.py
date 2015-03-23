@@ -64,8 +64,8 @@ def run_prepVCF(args):
 			pos = int(tmp_line[1])
 			refBase = tmp_line[2]
 			altBase = tmp_line[3]
-			pval = float(tmp_line[-3])
-			corrPval = float(tmp_line[-2])
+			pval = float(tmp_line[8])
+			corrPval = float(tmp_line[10])
 			ratio = float(tmp_line[-1])
 			fst = -1.0
 			if chr in dfst:
