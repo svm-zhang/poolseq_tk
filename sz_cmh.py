@@ -23,6 +23,7 @@ import sys
 import multiprocessing as mp
 import argparse
 import collections
+import math
 
 import sz_utils
 from colortext import ColorText
@@ -40,7 +41,7 @@ def run_cmh(args):
 	tables = collections.defaultdict(list)
 	ntests = 0
 	tables, ntables_per_snp = sz_utils._count2table(args.table_file)
-	ColorText().info("[poolseq_tk] %d tables prepared\n" %(len(tables)), "stderr")
+	ColorText().info("[poolseq_tk]: %d tables prepared\n" %(len(tables)), "stderr")
 
 	task_q = mp.JoinableQueue()
 	result_q = mp.Queue()
@@ -101,13 +102,21 @@ def run_cmh(args):
 				chr = k[0]
 				pos = k[1]
 				raw_pval = pvals[chr, pos]
+				log_pval = None
+				if raw_pval == 0.0:
+					log_pval = "Inf"
+				elif raw_pval == "Nan":
+					raw_pval = 1.0
+					log_pval = 0.0
+				else:
+					log_pval = -1 * math.log10(raw_pval)
 				odds_ratio = odds_ratios[chr, pos]
 				if padjust[i] <= args.adj_cutoff:
-					sz_utils._results_outputter(fFDR, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], pval, padjust[i], odds_ratio)
-					if ((args.oddsr_direction == "greater" and odds_ratios[pos] > 1) or
-						(args.oddsr_direction == "less" and odds_ratios[pos] < 1)):
-						sz_utils._results_outputter(fEXPECT, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], pval, padjust[i], odds_ratio)
-				sz_utils._results_outputter(fALL, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], pval, padjust[i], odds_ratio)
+					sz_utils._results_outputter(fFDR, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], raw_pval, log_pval, padjust[i], odds_ratio)
+					if ((args.oddsr_direction == "greater" and odds_ratios[chr, pos] > 1) or
+						(args.oddsr_direction == "less" and odds_ratios[chr, pos] < 1)):
+						sz_utils._results_outputter(fEXPECT, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], raw_pval, log_pval, padjust[i], odds_ratio)
+				sz_utils._results_outputter(fALL, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], raw_pval, log_pval, padjust[i], odds_ratio)
 		ColorText().info(" [done]\n", "stderr")
 		ColorText().info("[poolseq_tk]: Program finishes successfully\n", "stderr")
 
@@ -124,25 +133,27 @@ def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 			nTests = 0
 			for chr, pos in sorted(table_part.iterkeys()):
 				array = []
-				i = 0
+				i = 3
 				while i <= len(table_part[chr, pos])-4:
-					if(i > 2 and sum(map(int, table_part[chr, pos][i:i+4])) >= 10 and
+					if (i > 2 and sum(map(int, table_part[chr, pos][i:i+4])) >= 10 and
 					   int(table_part[chr, pos][i])+int(table_part[chr, pos][i+1]) >= 5 and
 					   int(table_part[chr, pos][i])+int(table_part[chr, pos][i+2]) >= 5 and
 					   int(table_part[chr, pos][i+2])+int(table_part[chr, pos][i+3]) >= 5 and
 					   int(table_part[chr, pos][i+1])+int(table_part[chr, pos][i+3]) >= 5):
 						array += map(int, table_part[chr, pos][i:i+4])
-						i += 4
-					else:
-						i += 1
+					i += 4
 				if len(array) == ntables_per_snp*4:
 					dim_vector = robjects.IntVector([2, 2, ntables_per_snp])
 					data = robjects.r['array'](robjects.IntVector(array), dim=dim_vector)
 					rcmh = robjects.r['mantelhaen.test'](data, alternative='t')
+					pvalue = rcmh[2][0]
 					nTests += 1
-					fOUT.write("%s\t%d\t%.8f\t%.8f\n" %(chr, pos, rcmh[1][0], rcmh[3][0]))
-#					pvals[pos] = float(rcmh[1][0])
-#					odds_ratios[pos] = float(rcmh[3][0])
+					if pvalue == "NaN":
+						pvalue = 1.0
+					if pvalue == 0.0:
+						fOUT.write("%s\t%d\t%.4g\t%.8f\tInf\n" %(chr, pos, float(pvalue), float(rcmh[4][0])))
+					else:
+						fOUT.write("%s\t%d\t%.8f\t%.8f\t%.8f\n" %(chr, pos, float(pvalue), float(rcmh[4][0]), -1*math.log10(pvalue)))
 			fOUT.close()
 			ColorText().info("[poolseq_tk]: %s ran %d tests\n"
 							 %(mp.current_process().name, nTests),
@@ -154,7 +165,7 @@ def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 
 def _create_procs(nproc, task_q, result_q, ntables_per_snp, outp):
 	''' initialize processes '''
-	ColorText().info("[poolseq_tk] Initializing processes ...\n", "stderr")
+	ColorText().info("[poolseq_tk]: Initializing processes ...\n", "stderr")
 	for _ in range(nproc):
 		p = mp.Process(target=_cmh_worker, args=(task_q, result_q, ntables_per_snp, outp))
 		p.daemon = True
