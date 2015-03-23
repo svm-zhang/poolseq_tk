@@ -34,13 +34,20 @@ def making_plot(args):
 
 	# get pvalues
 	ColorText().info("[poolseq_tk]: Extracting P-Values ... ", "stderr")
-	data = collections.defaultdict(tuple)
+	data = collections.defaultdict()
+	chrs = []
 	pvals, adjust_pvals = {}, {}
+	nchr = 0
 	with open(args.input, 'r') as fIN:
 		for line in fIN:
 			tmp_line = line.strip().split("\t")
-			data[int(tmp_line[1])] = ("_".join(tmp_line[0:2]), int(tmp_line[0][0]), int(tmp_line[1]))
-			pvals[int(tmp_line[1])] = float(tmp_line[-3])
+			chr = tmp_line[0]
+			pos = int(tmp_line[1])
+			if chr not in chrs:
+				chrs.append(chr)
+				nchr += 1
+			data[chr, pos] = nchr
+			pvals[chr, pos] = float(tmp_line[8])
 	ColorText().info(" [done]\n", "stderr")
 
 	# get FDR cutoff using BH if not provided through command line
@@ -96,10 +103,10 @@ def make_manhattan(grdevices, data, raw_pvals_vector,
 	snp_names = []
 	snp_pos = []
 	chr_names = []
-	for pos in sorted(data.iterkeys()):
+	for chr, pos in sorted(data.iterkeys()):
 		snp_pos.append(pos)
-		chr_names.append(int(data[pos][1]))
-		snp_names.append(data[pos][0])
+		chr_names.append(data[chr, pos])
+		snp_names.append("%s_%d" %(chr, pos))
 	od_raw = rlc.OrdDict([("SNP", robjects.StrVector(snp_names)),
 						  ("CHR", robjects.IntVector(chr_names)),
 						  ("BP", robjects.IntVector(snp_pos)),
@@ -121,5 +128,6 @@ def make_manhattan(grdevices, data, raw_pvals_vector,
 		qqman.manhattan(robjects.DataFrame(od_raw), highlight=sig_snps,
 						col = color_vector, suggestiveline=False,
 						genomewideline=-1*math.log10(padj_cutoff),
-						xlab=xlable, main=title)
+						main=title, ylim=robjects.IntVector([0, 10]),
+						chrlabs=robjects.StrVector(["2L", "2R", "3L", "3R", "X"]))
 	grdevices.dev_off()
