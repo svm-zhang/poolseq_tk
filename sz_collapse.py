@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import collections
+import re
 
 import sz_utils
 from colortext import ColorText
@@ -17,14 +18,14 @@ def run_collapse(args):
 	m2_base = os.path.basename(args.m2)
 
 	# first, getting the full list of SNPs
-	snp_pos = get_SNPs(args.snps)
+	dSNPs = get_SNPs(args.snps)
 
 	# second, reading each of the pileup files
-	chr1, m1_info = read_mpileup(args.m1, args.offset1)
-	chr2, m2_info = read_mpileup(args.m2, args.offset2)
+	chr1, dM1 = read_mpileup(args.m1, args.offset1)
+	chr2, dM2 = read_mpileup(args.m2, args.offset2)
 
-	ColorText().info("[poolseq_tk] %s: %d SNPs parsed\n" %(m1_base, len(m1_info)), "stderr")
-	ColorText().info("[poolseq_tk] %s: %d SNPs parsed\n" %(m2_base, len(m2_info)), "stderr")
+	ColorText().info("[poolseq_tk] %s: %d SNPs parsed\n" %(m1_base, len(dM1)), "stderr")
+	ColorText().info("[poolseq_tk] %s: %d SNPs parsed\n" %(m2_base, len(dM2)), "stderr")
 
 	fOUT = None
 	if args.out != sys.stdout:
@@ -35,119 +36,97 @@ def run_collapse(args):
 		fOUT = args.out
 	ColorText().info("[poolseq_tk]: collapsing mpileups %s and %s ..."
 					 %(m1_base, m2_base), "stderr")
-	for pos in sorted(snp_pos.iterkeys()):
+	for pos in sorted(dSNPs.iterkeys()):
 		reads_bases_collapsed = ""
-		if pos in m1_info and pos in m2_info:
+		if pos in dM1 and pos in dM2:
 			'''
-				snp_pos[pos][0]: ref base of m1 pileup
-				snp_pos[pos][1]: ref base of m2 pileup
-				m1_info[pos][0]: ref base of m1 pileup
-				m2_info[pos][1]: ref base of m2 pileup
+				dSNPs[pos][0]: ref base of m1 pileup
+				dSNPs[pos][1]: ref base of m2 pileup
+				dM1[pos][0]: ref base of m1 pileup
+				dM2[pos][1]: ref base of m2 pileup
 			'''
-			if snp_pos[pos][0] == m1_info[pos][0] and snp_pos[pos][1] == m2_info[pos][0]:
-				reads_bases_collapsed = collapse_reads_bases(m1_info[pos][0],
-															 m2_info[pos][0],
-															 m1_info[pos][1],
-															 reads_bases_collapsed)
-				reads_bases_collapsed = collapse_reads_bases(m2_info[pos][0],
-															 m1_info[pos][0],
-															 m2_info[pos][1],
-															 reads_bases_collapsed)
-				if reads_bases_collapsed == "":
-					fOUT.write("%s/%s\t%d\t%s\t%s\tN/A\n"
-									%(chr1, chr2, pos,
-									  snp_pos[pos][0], snp_pos[pos][1]))
-				else:
-					fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
-									%(chr1, chr2, pos,
-									  snp_pos[pos][0], snp_pos[pos][1], reads_bases_collapsed))
+			if dSNPs[pos][0] == dM1[pos][0] and dSNPs[pos][1] == dM2[pos][0]:
+				reads_bases_collapsed = parseReadsBases(dM1[pos][0],
+															 dM2[pos][0],
+															 dM1[pos][1])
+				reads_bases_collapsed += parseReadsBases(dM2[pos][0],
+															 dM1[pos][0],
+															 dM2[pos][1])
+				fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
+								%(chr1, chr2, pos,
+								  dSNPs[pos][0], dSNPs[pos][1], reads_bases_collapsed))
 			else:
 				# this should bark if the same sites having different states
 				ColorText().error("SNP position: %d %s %s\t\tMpileup position: %d %s %s\n"
-								 %(pos, snp_pos[pos][0], snp_pos[pos][1],
-								   pos, m1_info[pos][0], m2_info[pos][0]),
+								 %(pos, dSNPs[pos][0], dSNPs[pos][1],
+								   pos, dM1[pos][0], dM2[pos][0]),
 								   "stderr")
 		# SNPS missed in both pileup file
-		elif pos not in m1_info and pos not in m2_info:
+		elif pos not in dM1 and pos not in dM2:
+			fOUT.write("%s/%s\t%d\t%s\t%s\n"
+							%(chr1, chr2, pos,
+							  dSNPs[pos][0], dSNPs[pos][1]))
+		# SNPs in m1 pileup file but not in m2
+		elif pos in dM1 and pos not in dM2:
+			reads_bases_collapsed = parseReadsBases(dM1[pos][0],
+														 dSNPs[pos][1],
+														 dM1[pos][1])
 			fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
 							%(chr1, chr2, pos,
-							  snp_pos[pos][0], snp_pos[pos][1], "N/A"))
-		# SNPs in m1 pileup file but not in m2
-		elif pos in m1_info and pos not in m2_info:
-			reads_bases_collapsed = collapse_reads_bases(m1_info[pos][0],
-														 snp_pos[pos][1],
-														 m1_info[pos][1],
-														 reads_bases_collapsed)
-			if reads_bases_collapsed == "":
-				fOUT.write("%s/%s\t%d\t%s\t%s\tN/A\n"
-								%(chr1, chr2, pos,
-								  snp_pos[pos][0], snp_pos[pos][1]))
-			else:
-				fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
-								%(chr1, chr2, pos,
-								  snp_pos[pos][0], snp_pos[pos][1], reads_bases_collapsed))
+							  dSNPs[pos][0], dSNPs[pos][1], reads_bases_collapsed))
 		# SNPs in m2 pileup file but not in m1
-		elif pos not in m1_info and pos in m2_info:
-			reads_bases_collapsed = collapse_reads_bases(m2_info[pos][0],
-														 snp_pos[pos][0],
-														 m2_info[pos][1],
-														 reads_bases_collapsed)
-			if reads_bases_collapsed == "":
-				fOUT.write("%s/%s\t%d\t%s\t%s\tN/A\n"
-								%(chr1, chr2, pos,
-								  snp_pos[pos][0], snp_pos[pos][1]))
-			else:
-				fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
-								%(chr1, chr2, pos,
-								  snp_pos[pos][0], snp_pos[pos][1], reads_bases_collapsed))
+		elif pos not in dM1 and pos in dM2:
+			reads_bases_collapsed = parseReadsBases(dM2[pos][0],
+														 dSNPs[pos][0],
+														 dM2[pos][1])
+			fOUT.write("%s/%s\t%d\t%s\t%s\t%s\n"
+							%(chr1, chr2, pos,
+							  dSNPs[pos][0], dSNPs[pos][1], reads_bases_collapsed))
 	ColorText().info(" [done]\n", "stderr")
 	fOUT.close()
 
 def get_SNPs(snps_file):
 	''' read the SNP positions into a dictionary of tuple '''
-	snp_pos = collections.defaultdict(tuple)
+	dSNPs = collections.defaultdict(tuple)
 	sz_utils.check_if_files_exist(snps_file)
 	with open(snps_file, 'r') as fSNP:
 		for line in fSNP:
 			if not line.startswith('#'):
 				tmp_line = line.strip().split("\t")
-				'''
-					key: snp position in integer
-					value: a tuple with two elements
-						   1) one allele corresponding to the ref base of first pileup
-						   2) second allele correspoding to the ref base of second pileup
-				'''
-				snp_pos[int(tmp_line[0])] = (tmp_line[1], tmp_line[2])
-	return snp_pos
+				pos = int(tmp_line[0])
+				ref_base = tmp_line[1]
+				alt_base = tmp_line[2]
+				if pos not in dSNPs:
+					dSNPs[pos] = (ref_base, alt_base)
+	return dSNPs
 
 def read_mpileup(mpileup_file, offset):
 	''' read certain columns in a pileup file into a dictionary of tuple '''
 	ColorText().info("[poolseq_tk]: reading %s ..." %(mpileup_file), "stderr")
-	mpileup_info = collections.defaultdict(tuple)
+	dMpileups = collections.defaultdict(tuple)
 	chr = ""
 	sz_utils.check_if_files_exist(mpileup_file)
 	with open(mpileup_file, 'r') as fMPILEUP:
 		for line in fMPILEUP:
 			tmp_line = line.strip().split("\t")
 			chr = tmp_line[0]
-			'''
-				key: SNP position in integer
-				value: a tuple with two elements
-					   1) ref base at the position
-					   2) reads base covering that position
-						  if the coverage at that position > 0
-						  else N/A
-			'''
-			if int(tmp_line[3]) == 0:		# the forth column: coverage at a position
-				mpileup_info[int(tmp_line[1])+offset] = (tmp_line[2].upper(), "N/A")
-			else:
-				mpileup_info[int(tmp_line[1])+offset] = (tmp_line[2].upper(), tmp_line[4])
+			pos = int(tmp_line[1])
+			cov = int(tmp_line[3])
+			ref_base = tmp_line[2].upper()
+			if cov > 0:
+				reads_bases = tmp_line[4]
+				dMpileups[pos+offset] = (ref_base, reads_bases)
 	ColorText().info(" [done]\n", "stderr")
-	return chr, mpileup_info
+	return chr, dMpileups
+#			if cov == 0:		# the forth column: coverage at a position
+#				dMpileups[pos+offset] = (tmp_line[2].upper(), "N/A")
+#			else:
+#				dMpileups[pos+offset] = (tmp_line[2].upper(), tmp_line[4])
 
-def collapse_reads_bases(ref_base, alt_base, reads_bases, reads_bases_collapsed):
+def parseReadsBases(ref_base, alt_base, reads_bases):
 	''' collapse reads bases of the two pileup files '''
-	if reads_bases != "N/A":
+	reads_bases_collapsed = ""
+	if reads_bases != "":
 		i = 0
 		while i <= len(reads_bases)-1:
 			if reads_bases[i] == '.':
@@ -163,10 +142,13 @@ def collapse_reads_bases(ref_base, alt_base, reads_bases, reads_bases_collapsed)
 				reads_bases_collapsed += alt_base.lower()
 				i += 1
 			elif reads_bases[i] in ['+', '-']:
-				len_indel = int(reads_bases[i+1])
-				i += len_indel + 1 + 1
+				len_indel = int(re.search(r'\d+', reads_bases[i+1:i+3]).group())
+				i += len_indel + len(str(len_indel)) + 1
+			elif reads_bases[i] in ['N', 'n', '$', '*']:
+				i += 1
 			elif reads_bases[i] == '^':
 				i += 2
 			else:
+				reads_bases_collapsed += reads_bases[i]
 				i += 1
 	return reads_bases_collapsed
