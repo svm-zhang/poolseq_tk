@@ -23,6 +23,7 @@ import os
 import multiprocessing as mp
 import argparse
 import collections
+import math
 
 import sz_utils
 from colortext import ColorText
@@ -39,7 +40,7 @@ def run_fisher(args):
 
 	task_q = mp.JoinableQueue()
 	result_q = mp.Queue()
-	_create_procs(args.nproc,task_q, result_q)
+	create_procs(args.nproc, task_q, result_q, args.outp)
 	sz_utils._assign_tables(tables, task_q, args.nproc)
 
 	try:
@@ -49,11 +50,27 @@ def run_fisher(args):
 						 "stderr")
 		sys.exit()
 	else:
-		pvals, odds_ratios = {}, {}
+		pvals, odds_ratios, log10_pvals = {}, {}, {}
 		while args.nproc:
-			pvals_split, odds_ratios_split = result_q.get()
-			pvals.update(pvals_split)
-			odds_ratios.update(odds_ratios_split)
+			file = result_q.get()
+			with open(file, 'r') as fIN:
+				for line in fIN:
+					tmp_line = line.strip().split("\t")
+					chr = tmp_line[0]
+					pos = int(tmp_line[1])
+					pval = float(tmp_line[2])
+					odds_ratio = float(tmp_line[3])
+					log10_pval = tmp_line[4]
+					if (chr, pos) not in pvals:
+						pvals[chr, pos] = pval
+					if (chr, pos) not in odds_ratios:
+						odds_ratios[chr, pos] = odds_ratio
+					if (chr, pos) not in log10_pvals:
+						log10_pvals[chr, pos] = log10_pval
+			os.remove(file)
+#			pvals_split, odds_ratios_split = result_q.get()
+#			pvals.update(pvals_split)
+#			odds_ratios.update(odds_ratios_split)
 			args.nproc -= 1
 		ColorText().info("[poolseq_tk]: Running Fisher's Exact tests successfully\n", "stderr")
 
@@ -76,57 +93,83 @@ def run_fisher(args):
 		with open(out_all, 'w') as fALL, \
 			 open(out_fdr, 'w') as fFDR, \
 			 open(out_expect, 'w') as fEXPECT:
-			for i, pos in enumerate(sorted(pvals.iterkeys())):
+			for i, k in enumerate(sorted(pvals.iterkeys())):
+				chr = k[0]
+				pos = k[1]
+				raw_pval = pvals[k]
+				log_pval = log10_pvals[k]
+				odds_ratio = odds_ratios[k]
 				if padjust[i] <= args.adj_cutoff:
-					sz_utils._results_outputter(fFDR, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
-					if ((args.oddsr_direction == "less" and odds_ratios[pos] < 1) or
-						 args.oddsr_direction == "greater" and odds_ratios[pos] > 1):
-						sz_utils._results_outputter(fEXPECT, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
-				sz_utils._results_outputter(fALL, pos, tables[pos][0], "\t".join(tables[pos][1:3]), tables[pos][3:], pvals[pos], padjust[i], odds_ratios[pos])
+					sz_utils._results_outputter(fFDR, pos, chr, "\t".join(tables[k][1:3]), tables[k][3:], raw_pval, log_pval, padjust[i], odds_ratio)
+					if ((args.oddsr_direction == "greater" and odds_ratios[k] > 1) or
+						(args.oddsr_direction == "less" and odds_ratios[k] < 1)):
+						sz_utils._results_outputter(fEXPECT, pos, chr, "\t".join(tables[k][1:3]), tables[k][3:], raw_pval, log_pval, padjust[i], odds_ratio)
+				sz_utils._results_outputter(fALL, pos, chr, "\t".join(tables[k][1:3]), tables[k][3:], raw_pval, log_pval, padjust[i], odds_ratio)
 		ColorText().info(" [done]\n", "stderr")
 		ColorText().info("[poolseq_tk]: Program finishes successfully\n", "stderr")
 
-def _create_procs(nproc, task_q, result_q):
+def create_procs(nproc, task_q, result_q, outp):
 	''' initialize processes '''
 	ColorText().info("[poolseq_tk]: Initializing processes ...\n", "stderr")
 	for _ in range(nproc):
-		p = mp.Process(target=_fisher_worker, args=(task_q, result_q))
+		p = mp.Process(target=fisher_worker, args=(task_q, result_q, outp))
 		p.daemon = True
 		p.start()
 
-def _fisher_worker(task_q, result_q):
+def fisher_worker(task_q, result_q, outp):
 	while True:
 		try:
 			tables, nth_job = task_q.get()
 			ColorText().info("[poolseq_tk]: %s running Fisher's Exact test on %d tables ...\n"
 							 %(mp.current_process().name, len(tables)), "stderr")
+			tmpFile = outp + "." + mp.current_process().name + ".fisher"
+			fOUT = open(tmpFile, 'w')
 			pvals_split, odds_ratios_split = {}, {}
-			for pos in sorted(tables.iterkeys()):
+			nTests = 0
+			for k in sorted(tables.iterkeys()):
 				oddsr = 0.0
-				alt_base = tables[pos][2]
-				ref_base = tables[pos][1]
-				ref_ac1 = int(tables[pos][3])
-				alt_ac1 = int(tables[pos][4])
-				ref_ac2 = int(tables[pos][5])
-				alt_ac2 = int(tables[pos][6])
-				if (sum(map(int, tables[pos][3:7])) >= 10 and
+				chr = k[0]
+				pos = k[1]
+				alt_base = tables[k][2]
+				ref_base = tables[k][1]
+				ref_ac1 = int(tables[k][3])
+				alt_ac1 = int(tables[k][4])
+				ref_ac2 = int(tables[k][5])
+				alt_ac2 = int(tables[k][6])
+				if (sum(map(int, tables[k][3:7])) >= 10 and
 					alt_ac1 + ref_ac1 >= 5 and			# row subtotals
 					alt_ac2 + ref_ac2 >= 5 and
 					alt_ac1 + alt_ac2 >= 5 and			# column subtotals
 					ref_ac1 + ref_ac2 >= 5):
+					nTests += 1
+					if (ref_ac1 == 0 or ref_ac2 == 0 or		# add pseudo counts in case
+						alt_ac1 == 0 or alt_ac2 == 0):		# odds ratio goes to Inf
+						ref_ac1 += 1
+						ref_ac2 += 1
+						alt_ac1 += 1
+						alt_ac2 += 1
 					data_vector = robjects.IntVector([ref_ac1, alt_ac1, ref_ac2, alt_ac2])
 					table = robjects.r['matrix'](data_vector, ncol=2)
 					rfisher = robjects.r['fisher.test'](table, alternative='t')
-					pvals_split[pos] = float(rfisher[0][0])
-					if (ref_ac1 == 0 or ref_ac2 == 0 or
-						alt_ac1 == 0 or alt_ac2 == 0):
-						oddsr = (float(ref_ac1+1)/(alt_ac1+1))/(float(ref_ac2+1)/(alt_ac2+1))
+#					pvals_split[pos] = float(rfisher[0][0])
+#					if (ref_ac1 == 0 or ref_ac2 == 0 or
+#						alt_ac1 == 0 or alt_ac2 == 0):
+#						oddsr = (float(ref_ac1+1)/(alt_ac1+1))/(float(ref_ac2+1)/(alt_ac2+1))
+#					else:
+					pvalue = float(rfisher[0][0])
+					oddsr = rfisher[2][0]
+#					odds_ratios_split[pos] = oddsr
+					if pvalue == 0.0:
+						fOUT.write("%s\t%d\t%.4g\t%.8f\tInf\n" %(chr, pos, pvalue, oddsr))
+					elif pvalue == 1.0:
+						fOUT.write("%s\t%d\t%.4g\t%.8f\t0.00000000\n" %(chr, pos, pvalue, oddsr))
 					else:
-						oddsr = rfisher[2][0]
-					odds_ratios_split[pos] = oddsr
+						fOUT.write("%s\t%d\t%.8f\t%.8f\t%.8f\n" %(chr, pos, pvalue, oddsr, -1*math.log10(pvalue)))
+			fOUT.close()
 			ColorText().info("[poolseq_tk]: %s ran %d tests\n"
-							 %(mp.current_process().name, len(pvals_split)),
+							 %(mp.current_process().name, nTests),
 							 "stderr")
-			result_q.put((pvals_split, odds_ratios_split))
+			result_q.put(tmpFile)
+#			result_q.put((pvals_split, odds_ratios_split))
 		finally:
 			task_q.task_done()
