@@ -45,7 +45,7 @@ def run_cmh(args):
 
 	task_q = mp.JoinableQueue()
 	result_q = mp.Queue()
-	_create_procs(args.nproc,task_q, result_q, ntables_per_snp, args.outp)
+	create_procs(args.nproc,task_q, result_q, ntables_per_snp, args.outp)
 	sz_utils._assign_tables(tables, task_q, args.nproc)
 
 	# waiting for all tasks to be finished
@@ -110,7 +110,7 @@ def run_cmh(args):
 					log_pval = 0.0
 				else:
 					log_pval = -1 * math.log10(raw_pval)
-				odds_ratio = odds_ratios[chr, pos]
+				odds_ratio = odds_ratios[k]
 				if padjust[i] <= args.adj_cutoff:
 					sz_utils._results_outputter(fFDR, pos, chr, "\t".join(tables[chr, pos][1:3]), tables[chr, pos][3:], raw_pval, log_pval, padjust[i], odds_ratio)
 					if ((args.oddsr_direction == "greater" and odds_ratios[chr, pos] > 1) or
@@ -120,7 +120,7 @@ def run_cmh(args):
 		ColorText().info(" [done]\n", "stderr")
 		ColorText().info("[poolseq_tk]: Program finishes successfully\n", "stderr")
 
-def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
+def cmh_worker(task_q, result_q, ntables_per_snp, outp):
 	while True:
 		try:
 			table_part, nth_job = task_q.get()
@@ -163,10 +163,10 @@ def _cmh_worker(task_q, result_q, ntables_per_snp, outp):
 		finally:
 			task_q.task_done()
 
-def _create_procs(nproc, task_q, result_q, ntables_per_snp, outp):
+def create_procs(nproc, task_q, result_q, ntables_per_snp, outp):
 	''' initialize processes '''
 	ColorText().info("[poolseq_tk]: Initializing processes ...\n", "stderr")
 	for _ in range(nproc):
-		p = mp.Process(target=_cmh_worker, args=(task_q, result_q, ntables_per_snp, outp))
+		p = mp.Process(target=cmh_worker, args=(task_q, result_q, ntables_per_snp, outp))
 		p.daemon = True
 		p.start()
