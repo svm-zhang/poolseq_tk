@@ -40,7 +40,6 @@ def run_count(args):
 		ColorText().info("[poolseq_tk] no SNP positions provided ... [skipped]\n", "stderr")
 
 	ac = collections.defaultdict(tuple)
-	fOUT = open(args.out, 'w')
 	for pileup in args.pileups:
 		sz_utils.check_if_files_exist(pileup)
 		nsnps = 0
@@ -51,7 +50,8 @@ def run_count(args):
 				tmp_line = line.strip().split("\t")
 				chr = tmp_line[0]
 				pos = int(tmp_line[1])
-				if (chr, pos) in dPos:
+				if (((chr, pos) in dPos and args.pos) or
+					(len(dPos) == 0 and not args.pos)):
 					ref_base = tmp_line[2]
 					alt_base = tmp_line[3]
 					nRefAlleles, nAltAlleles = 0, 0
@@ -119,57 +119,3 @@ def parseReadsBases(reads_bases, refBase, altBase):
 			i += 1
 		cov += 1
 	return cov, nRefAlleles, nAltAlleles, nOtherAlleles
-
-#def run_count(args):
-#	''' Counting alleles at each SNP in the given pileup files '''
-#	ac = collections.defaultdict(tuple)
-#	fOUT = open(args.out, 'w')
-#	for pileup in args.pileups:
-#		sz_utils.check_if_files_exist(pileup)
-#		nsnps = 0
-#		ColorText().info("[poolseq_tk] counting alleles in %s:" %(os.path.basename(pileup)), "stderr")
-#		with open(pileup, 'r') as fMPILEUP:
-#			for line in fMPILEUP:
-#				nsnps += 1
-#				tmp_line = line.strip().split("\t")
-#				chr = tmp_line[0]
-#				pos = int(tmp_line[1])
-#				ref_base = tmp_line[2]
-#				alt_base = tmp_line[3]
-#				ref_count, alt_count = 0, 0
-#				baseCounts = {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0}
-#				if tmp_line[-1] != "N/A":
-#					ref_count = tmp_line[-1].count(ref_base) + \
-#								tmp_line[-1].count(ref_base.lower())
-#					alt_count = tmp_line[-1].count(alt_base) + \
-#								tmp_line[-1].count(alt_base.lower())
-#				if (chr, pos) not in ac:
-#					ac[chr, pos] = [ref_base, alt_base, str(ref_count), str(alt_count)]
-#				else:
-#					ac[chr, pos] += [str(ref_count), str(alt_count)]
-#				for k in baseCounts.iterkeys():
-#					baseCounts[k] = tmp_line[-1].count(k) + \
-#									tmp_line[-1].count(k.lower())
-#				fOUT.write("%s\t%s\t%d:%d:%d:%d:%d\n" %(chr, pos, baseCounts['A'], baseCounts['T'], baseCounts['C'], baseCounts['G'], baseCounts['N']))
-#				if pos not in ac:
-#					ac[pos] = [chr, ref_base, alt_base, str(ref_count), str(alt_count)]
-#				else:
-#					ac[pos] += [str(ref_count), str(alt_count)]
-#		ColorText().info(" %d SNPs parsed\n" %(nsnps), "stderr")
-#	ColorText().info(" [done]\n", "stderr")
-#	fOUT.close()
-
-#		if len(args.pileups) != 1:
-#			# this deals with case where some pools have no data at this site
-#			if len(ac[pos][i:]) >= 2*len(args.pileups):
-#				fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
-#				while i <= len(ac[pos])-4:
-#					fOUT.write("\t%s" %(":".join(ac[pos][i:i+4])))
-#					i += 4
-#				fOUT.write("\n")
-#		else:			# case where only one pileup file provided
-#			fOUT.write("%s\t%d\t%s" %(ac[pos][0], pos, "\t".join(ac[pos][1:3])))
-#			while i <= len(ac[pos])-2:
-#				fOUT.write("\t%s" %(":".join(ac[pos][i:i+2])))
-#				i += 2
-#			fOUT.write("\n")
