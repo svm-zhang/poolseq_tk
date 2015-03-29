@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import collections
+import re
 
 from colortext import ColorText
 
