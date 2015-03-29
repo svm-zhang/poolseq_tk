@@ -51,10 +51,10 @@ def run_view(args):
 				del dSNPs[chr, pos]
 	fOUT.close()
 
-	ColorText().info("[poolseq_tk]: There are %d sites where more than 2 alleles occur\n"
-					 %(nRemoved), "stderr")
-	ColorText().info("[poolseq_tk]: There are %d SNPs having no reads coverage for this dataset\n"
-					 %(len(dSNPs)), "stderr")
+#	ColorText().info("[poolseq_tk]: There are %d sites where more than 2 alleles occur\n"
+#					 %(nRemoved), "stderr")
+#	ColorText().info("[poolseq_tk]: There are %d SNPs having no reads coverage for this dataset\n"
+#					 %(len(dSNPs)), "stderr")
 
 def getSNPs(isnp):
 	'''
@@ -76,5 +76,4 @@ def getSNPs(isnp):
 			altBase = tmp_line[3]
 			if not (chr, pos) in dSNPs:
 				dSNPs[chr, pos] = (refBase, altBase)
-
 	return dSNPs
