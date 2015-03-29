@@ -18,6 +18,7 @@ import sz_plotting
 import sz_overlap
 import sz_prepVCF
 import sz_view
+import sz_biallelic
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
@@ -47,34 +48,6 @@ def getopts():
 	parser = argparse.ArgumentParser(description="Toolkits for Genome-wide Association Mapping using Pooled Sequencing")
 	sub_parsers = parser.add_subparsers(title="Commands", metavar="", dest="command")
 
-	usage = "Preparing VCF file from tests result file for snpEff"
-	prepVCF_parser = sub_parsers.add_parser("vcf", help=usage)
-	prepVCF_parser.add_argument("-i",
-								metavar="FILE",
-								dest="infile",
-								required="True",
-								help="test result file generated from poolseq_tk.py fisher or poolseq_tk.py cmh")
-	prepVCF_parser.add_argument("-o",
-								metavar="FILE",
-								dest="out",
-								help="output in VCF format.")
-	prepVCF_parser.add_argument("-samples",
-								metavar="LIST",
-								dest="samples",
-								default="table1,table2,table3,table4",
-								help="a list of sample names separated by comma")
-	prepVCF_parser.add_argument("-filter",
-								metavar="EXPR",
-								nargs='*',
-								dest="filters",
-								default=list(),
-								help="a set of filters to apply. Only support INFO field ratio, e.g. ratio>1")
-	prepVCF_parser.add_argument("-fst",
-								metavar="FILE",
-								dest="ifst",
-								help="a file of Fst values")
-	prepVCF_parser.set_defaults(func=sz_prepVCF.run_prepVCF)
-
 	usage = "Viewing mpileup file (transforming 5th column in mpileup into human readable letters)"
 	view_parser = sub_parsers.add_parser("view", help=usage)
 	view_parser.add_argument("-mpileup",
@@ -91,7 +64,7 @@ def getopts():
 							 metavar="FILE",
 							 dest="out",
 							 help="tab-delimited file with five columns: chr, pos, ref, alt, transformed reads bases ")
-	view_parser.set_defaults(func=sz_view.viewPileup)
+	view_parser.set_defaults(func=sz_view.run_view)
 
 	# Collapsing two mpileup files
 	usage = "Collapsing two pileup files at corresponding SNPs"
@@ -137,11 +110,28 @@ def getopts():
 							  dest="out",
 							  default=sys.stdout,
 							  help="output file of allele counts at each SNP. Default: STDOUT")
+	count_parser.add_argument("-pos",
+							  metavar="FILE",
+							  dest="pos",
+							  help="file of SNPs where counting will happen")
 	count_parser.add_argument("pileups",
 							  metavar="PILEUP",
 							  nargs='+',
 							  help="pileup files")
 	count_parser.set_defaults(func=sz_acount.run_count)
+
+	usage = "Getting Biallelic sites only"
+	biallelic_parser = sub_parsers.add_parser("biallelic", help=usage)
+	biallelic_parser.add_argument("-o",
+								  metavar="FILE",
+								  dest="out",
+								  required=True,
+								  help="output file of biallelic sites")
+	biallelic_parser.add_argument("pileups",
+								  metavar="PILEUP",
+								  nargs='+',
+								  help="pileup files")
+	biallelic_parser.set_defaults(func=sz_biallelic.run_biallelic)
 
 	usage = "Filter SNPs that are not satisfied specified conditions"
 	filter_parser = sub_parsers.add_parser("filter", help=usage)
@@ -227,7 +217,7 @@ def getopts():
 
 	usage="run Cochran-Mantel-Haenszel test with multi-testing adjustment"
 	cmh_parser = sub_parsers.add_parser("cmh", help=usage)
-	cmh_parser.add_argument("-table",
+	cmh_parser.add_argument("-ac",
 							metavar="FILE",
 							dest="table_file",
 							required=True,
@@ -316,6 +306,34 @@ def getopts():
 								   action="store_true",
 								   help="output qqplot in pdf format. Probably not working!")
 	plot_parser.set_defaults(func=sz_plotting.making_plot)
+
+	usage = "Preparing VCF file from tests result file for snpEff"
+	prepVCF_parser = sub_parsers.add_parser("vcf", help=usage)
+	prepVCF_parser.add_argument("-i",
+								metavar="FILE",
+								dest="infile",
+								required="True",
+								help="test result file generated from poolseq_tk.py fisher or poolseq_tk.py cmh")
+	prepVCF_parser.add_argument("-o",
+								metavar="FILE",
+								dest="out",
+								help="output in VCF format.")
+	prepVCF_parser.add_argument("-samples",
+								metavar="LIST",
+								dest="samples",
+								default="table1,table2,table3,table4",
+								help="a list of sample names separated by comma")
+	prepVCF_parser.add_argument("-filter",
+								metavar="EXPR",
+								nargs='*',
+								dest="filters",
+								default=list(),
+								help="a set of filters to apply. Only support INFO field ratio, e.g. ratio>1")
+	prepVCF_parser.add_argument("-fst",
+								metavar="FILE",
+								dest="ifst",
+								help="a file of Fst values")
+	prepVCF_parser.set_defaults(func=sz_prepVCF.run_prepVCF)
 
 	adjust_parser = sub_parsers.add_parser("adjust", help="getting significant SNPs with FDR correction")
 	diff_parser = sub_parsers.add_parser("diff", help="get SNPs that significant in one replicate but not in the other")
