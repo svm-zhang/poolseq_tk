@@ -25,7 +25,7 @@ def run_biallelic(args):
 						reads_bases.count(alt_base.lower())
 			other_count = len(reads_bases) - ref_count - alt_count
 			if float(other_count)/len(reads_bases) < 0.05:
-				fOUT.write("%s\t%d\n" %(chr, pos))
+				fOUT.write("%s\t%d\t%s\t%s\n" %(chr, pos, ref_base, alt_base))
 				nSNPsKept += 1
 			else:
 				nMulti += 1
